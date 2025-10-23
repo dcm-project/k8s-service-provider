@@ -54,23 +54,16 @@ paths:
                 value:
                   kind: vm
                   metadata:
-                    name: ubuntu-vm
+                    name: fedora-vm
                     namespace: default
                     labels:
-                      os: ubuntu
-                      version: "20.04"
+                      os: fedora
+                      environment: development
                   spec:
                     vm:
-                      image: ubuntu:20.04
+                      ram: 4
                       cpu: 2
-                      memory: 4Gi
-                      disk: 20Gi
-                      sshKey: "ssh-rsa AAAAB3NzaC1yc2E..."
-                      cloudInit: |
-                        #cloud-config
-                        users:
-                          - name: ubuntu
-                            sudo: ALL=(ALL) NOPASSWD:ALL
+                      os: fedora
       responses:
         '201':
           description: Deployment created successfully
@@ -410,33 +403,24 @@ components:
         vm:
           type: object
           required:
-            - image
+            - ram
             - cpu
-            - memory
+            - os
           properties:
-            image:
-              type: string
-              description: VM image name
+            ram:
+              type: integer
+              minimum: 1
+              maximum: 32
+              description: Memory allocation in GB
             cpu:
               type: integer
               minimum: 1
               maximum: 32
               description: Number of CPU cores
-            memory:
+            os:
               type: string
-              pattern: '^[0-9]+[KMGT]?i?$'
-              description: Memory allocation (e.g., 4Gi, 1024Mi)
-            disk:
-              type: string
-              pattern: '^[0-9]+[KMGT]?i?$'
-              description: Disk size (e.g., 20Gi, 100Gi)
-              default: 10Gi
-            sshKey:
-              type: string
-              description: SSH public key for access
-            cloudInit:
-              type: string
-              description: Cloud-init configuration script
+              enum: [fedora, ubuntu, centos, rhel]
+              description: Operating system for the VM
 
     DeploymentStatus:
       type: object

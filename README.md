@@ -74,28 +74,35 @@ The service consists of several key components:
 {
   "kind": "vm",
   "metadata": {
-    "name": "ubuntu-vm",
+    "name": "fedora-vm",
     "namespace": "default",
     "labels": {
-      "os": "ubuntu"
+      "os": "fedora",
+      "environment": "development"
     }
   },
   "spec": {
     "vm": {
-      "image": "ubuntu:20.04",
+      "ram": 4,
       "cpu": 2,
-      "memory": "4Gi",
-      "disk": "20Gi",
-      "sshKey": "ssh-rsa AAAAB3NzaC1yc2E...",
-      "cloudInit": "#cloud-config\\nusers:\\n  - name: ubuntu"
+      "os": "fedora"
     }
   }
 }
 ```
 
+**Supported Operating Systems**: `fedora`, `ubuntu`, `centos`, `rhel`
+
+**VM Specifications**:
+- `ram`: Memory allocation in GB (1-32)
+- `cpu`: Number of CPU cores (1-32)
+- `os`: Operating system (automatically maps to appropriate container disk image)
+
 ## Prerequisites
 
-- Go 1.21 or later
+- Go 1.23 or later
+- Kubernetes cluster with KubeVirt installed (for VM deployments)
+- Valid kubeconfig for cluster access
 
 ## Installation
 
