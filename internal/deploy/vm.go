@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/dcm/service-provider/internal/models"
+	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -24,14 +25,14 @@ type VMService struct {
 // NewVMService creates a new VM service instance
 func NewVMService(k8sClient kubernetes.Interface, logger *zap.Logger) *VMService {
 	// Create KubeVirt client using default config
-	kubevirtClient, err := kubecli.GetKubevirtClient()
+	virtClient, err := kubecli.GetKubevirtClientFromClientConfig(kubecli.DefaultClientConfig(&pflag.FlagSet{}))
 	if err != nil {
 		logger.Fatal("Failed to create KubeVirt client", zap.Error(err))
 	}
 
 	return &VMService{
 		k8sClient:      k8sClient,
-		kubevirtClient: kubevirtClient,
+		kubevirtClient: virtClient,
 		logger:         logger,
 	}
 }
