@@ -75,14 +75,11 @@ type VMSpec struct {
 	VM VMConfig `json:"vm" binding:"required"`
 }
 
-// VMConfig represents virtual machine configuration
+// VMConfig represents virtual machine configuration aligned with CatalogVm
 type VMConfig struct {
-	Image     string `json:"image" binding:"required"`
-	CPU       int    `json:"cpu" binding:"required,min=1,max=32"`
-	Memory    string `json:"memory" binding:"required"`
-	Disk      string `json:"disk,omitempty"`
-	SSHKey    string `json:"sshKey,omitempty"`
-	CloudInit string `json:"cloudInit,omitempty"`
+	Ram int    `json:"ram" binding:"required,min=1,max=32"`
+	Cpu int    `json:"cpu" binding:"required,min=1,max=32"`
+	Os  string `json:"os" binding:"required"`
 }
 
 // DeploymentStatus represents the status of a deployment
