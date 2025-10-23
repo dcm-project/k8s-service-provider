@@ -14,12 +14,12 @@ import (
 
 // Handler handles HTTP requests for the deployment service
 type Handler struct {
-	deployService *deploy.DeploymentService
+	deployService deploy.DeploymentServiceInterface
 	logger        *zap.Logger
 }
 
 // NewHandler creates a new API handler
-func NewHandler(deployService *deploy.DeploymentService, logger *zap.Logger) *Handler {
+func NewHandler(deployService deploy.DeploymentServiceInterface, logger *zap.Logger) *Handler {
 	return &Handler{
 		deployService: deployService,
 		logger:        logger,
@@ -258,7 +258,7 @@ func (h *Handler) DeleteDeployment(c *gin.Context) {
 	}
 
 	logger.Info("Successfully deleted deployment", zap.String("deployment_id", deploymentID))
-	c.Status(http.StatusNoContent)
+	c.AbortWithStatus(http.StatusNoContent)
 }
 
 // ListDeployments handles GET /deployments

@@ -56,16 +56,13 @@ func TestDeploymentRequest_JSON(t *testing.T) {
 				},
 				Spec: VMSpec{
 					VM: VMConfig{
-						Image:     "ubuntu:20.04",
-						CPU:       2,
-						Memory:    "4Gi",
-						Disk:      "20Gi",
-						SSHKey:    "ssh-rsa AAAAB3NzaC1yc2E...",
-						CloudInit: "#cloud-config\nusers:\n  - name: ubuntu",
+						Ram: 4,
+						Cpu: 2,
+						Os:  "fedora",
 					},
 				},
 			},
-			wantJSON: `{"kind":"vm","metadata":{"name":"test-vm","namespace":"default"},"spec":{"vm":{"image":"ubuntu:20.04","cpu":2,"memory":"4Gi","disk":"20Gi","sshKey":"ssh-rsa AAAAB3NzaC1yc2E...","cloudInit":"#cloud-config\nusers:\n  - name: ubuntu"}}}`,
+			wantJSON: `{"kind":"vm","metadata":{"name":"test-vm","namespace":"default"},"spec":{"vm":{"ram":4,"cpu":2,"os":"fedora"}}}`,
 		},
 	}
 

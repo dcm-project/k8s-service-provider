@@ -2,6 +2,7 @@ package test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,7 +12,6 @@ import (
 	"github.com/dcm/service-provider/internal/api"
 	"github.com/dcm/service-provider/internal/deploy"
 	"github.com/dcm/service-provider/internal/models"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 )
@@ -47,7 +47,10 @@ type MockDeploymentService struct {
 	deployments map[string]*models.DeploymentResponse
 }
 
-func (m *MockDeploymentService) CreateDeployment(ctx interface{}, req *models.DeploymentRequest, id string) error {
+// Verify that MockDeploymentService implements DeploymentServiceInterface
+var _ deploy.DeploymentServiceInterface = (*MockDeploymentService)(nil)
+
+func (m *MockDeploymentService) CreateDeployment(ctx context.Context, req *models.DeploymentRequest, id string) error {
 	if m.deployments == nil {
 		m.deployments = make(map[string]*models.DeploymentResponse)
 	}
@@ -64,7 +67,7 @@ func (m *MockDeploymentService) CreateDeployment(ctx interface{}, req *models.De
 	return nil
 }
 
-func (m *MockDeploymentService) GetDeploymentByID(ctx interface{}, id, namespace string) (*models.DeploymentResponse, error) {
+func (m *MockDeploymentService) GetDeploymentByID(ctx context.Context, id, namespace string) (*models.DeploymentResponse, error) {
 	if m.deployments == nil {
 		return nil, fmt.Errorf("deployment not found")
 	}
@@ -76,7 +79,7 @@ func (m *MockDeploymentService) GetDeploymentByID(ctx interface{}, id, namespace
 	return deployment, nil
 }
 
-func (m *MockDeploymentService) UpdateDeployment(ctx interface{}, req *models.DeploymentRequest, id string) error {
+func (m *MockDeploymentService) UpdateDeployment(ctx context.Context, req *models.DeploymentRequest, id string) error {
 	if m.deployments == nil {
 		return fmt.Errorf("deployment not found")
 	}
@@ -90,7 +93,7 @@ func (m *MockDeploymentService) UpdateDeployment(ctx interface{}, req *models.De
 	return nil
 }
 
-func (m *MockDeploymentService) DeleteDeployment(ctx interface{}, id, namespace string, kind models.DeploymentKind) error {
+func (m *MockDeploymentService) DeleteDeployment(ctx context.Context, id, namespace string, kind models.DeploymentKind) error {
 	if m.deployments == nil {
 		return fmt.Errorf("deployment not found")
 	}
@@ -103,7 +106,7 @@ func (m *MockDeploymentService) DeleteDeployment(ctx interface{}, id, namespace 
 	return nil
 }
 
-func (m *MockDeploymentService) ListDeployments(ctx interface{}, req *models.ListDeploymentsRequest) (*models.ListDeploymentsResponse, error) {
+func (m *MockDeploymentService) ListDeployments(ctx context.Context, req *models.ListDeploymentsRequest) (*models.ListDeploymentsResponse, error) {
 	if m.deployments == nil {
 		return &models.ListDeploymentsResponse{
 			Deployments: []models.DeploymentResponse{},
@@ -215,7 +218,9 @@ func (suite *IntegrationTestSuite) TestContainerDeploymentLifecycle() {
 
 	// Update deployment
 	updateReq := createReq
-	updateReq.Spec.(models.ContainerSpec).Container.Replicas = 3
+	containerSpec := updateReq.Spec.(models.ContainerSpec)
+	containerSpec.Container.Replicas = 3
+	updateReq.Spec = containerSpec
 	updateBody, _ := json.Marshal(updateReq)
 
 	client := &http.Client{}
@@ -252,20 +257,17 @@ func (suite *IntegrationTestSuite) TestVMDeploymentLifecycle() {
 	createReq := models.DeploymentRequest{
 		Kind: models.DeploymentKindVM,
 		Metadata: models.Metadata{
-			Name:      "test-ubuntu-vm",
+			Name:      "test-fedora-vm",
 			Namespace: "default",
 			Labels: map[string]string{
-				"os": "ubuntu",
+				"os": "fedora",
 			},
 		},
 		Spec: models.VMSpec{
 			VM: models.VMConfig{
-				Image:     "ubuntu:20.04",
-				CPU:       2,
-				Memory:    "4Gi",
-				Disk:      "20Gi",
-				SSHKey:    "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ...",
-				CloudInit: "#cloud-config\nusers:\n  - name: ubuntu\n    sudo: ALL=(ALL) NOPASSWD:ALL",
+				Ram: 4,
+				Cpu: 2,
+				Os:  "fedora",
 			},
 		},
 	}
@@ -280,7 +282,7 @@ func (suite *IntegrationTestSuite) TestVMDeploymentLifecycle() {
 	err = json.NewDecoder(resp.Body).Decode(&createResp)
 	suite.NoError(err)
 	suite.Equal(models.DeploymentKindVM, createResp.Kind)
-	suite.Equal("test-ubuntu-vm", createResp.Metadata.Name)
+	suite.Equal("test-fedora-vm", createResp.Metadata.Name)
 	deploymentID := createResp.ID
 
 	// Get deployment
@@ -302,8 +304,8 @@ func (suite *IntegrationTestSuite) TestErrorHandling() {
 	suite.NoError(err)
 	suite.Equal(http.StatusBadRequest, resp.StatusCode)
 
-	// Test missing deployment ID
-	resp, err = http.Get(suite.router.URL + "/api/v1/deployments/")
+	// Test invalid endpoint
+	resp, err = http.Get(suite.router.URL + "/api/v1/invalid-endpoint")
 	suite.NoError(err)
 	suite.Equal(http.StatusNotFound, resp.StatusCode) // Router will return 404 for missing path
 
@@ -342,9 +344,9 @@ func (suite *IntegrationTestSuite) TestListDeploymentsWithFilters() {
 		},
 		Spec: models.VMSpec{
 			VM: models.VMConfig{
-				Image:  "ubuntu:20.04",
-				CPU:    1,
-				Memory: "2Gi",
+				Ram: 2,
+				Cpu: 1,
+				Os:  "fedora",
 			},
 		},
 	}

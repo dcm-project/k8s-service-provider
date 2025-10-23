@@ -9,6 +9,15 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+// DeploymentServiceInterface defines the interface for deployment operations
+type DeploymentServiceInterface interface {
+	CreateDeployment(ctx context.Context, req *models.DeploymentRequest, id string) error
+	GetDeploymentByID(ctx context.Context, id, namespace string) (*models.DeploymentResponse, error)
+	UpdateDeployment(ctx context.Context, req *models.DeploymentRequest, id string) error
+	DeleteDeployment(ctx context.Context, id, namespace string, kind models.DeploymentKind) error
+	ListDeployments(ctx context.Context, req *models.ListDeploymentsRequest) (*models.ListDeploymentsResponse, error)
+}
+
 // DeploymentService orchestrates container and VM deployments
 type DeploymentService struct {
 	containerService *ContainerService

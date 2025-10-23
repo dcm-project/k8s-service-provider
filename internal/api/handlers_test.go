@@ -2,11 +2,13 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/dcm/service-provider/internal/deploy"
 	"github.com/dcm/service-provider/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -19,12 +21,15 @@ type MockDeploymentService struct {
 	mock.Mock
 }
 
-func (m *MockDeploymentService) CreateDeployment(ctx interface{}, req *models.DeploymentRequest, id string) error {
+// Verify that MockDeploymentService implements DeploymentServiceInterface
+var _ deploy.DeploymentServiceInterface = (*MockDeploymentService)(nil)
+
+func (m *MockDeploymentService) CreateDeployment(ctx context.Context, req *models.DeploymentRequest, id string) error {
 	args := m.Called(ctx, req, id)
 	return args.Error(0)
 }
 
-func (m *MockDeploymentService) GetDeploymentByID(ctx interface{}, id, namespace string) (*models.DeploymentResponse, error) {
+func (m *MockDeploymentService) GetDeploymentByID(ctx context.Context, id, namespace string) (*models.DeploymentResponse, error) {
 	args := m.Called(ctx, id, namespace)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -32,17 +37,17 @@ func (m *MockDeploymentService) GetDeploymentByID(ctx interface{}, id, namespace
 	return args.Get(0).(*models.DeploymentResponse), args.Error(1)
 }
 
-func (m *MockDeploymentService) UpdateDeployment(ctx interface{}, req *models.DeploymentRequest, id string) error {
+func (m *MockDeploymentService) UpdateDeployment(ctx context.Context, req *models.DeploymentRequest, id string) error {
 	args := m.Called(ctx, req, id)
 	return args.Error(0)
 }
 
-func (m *MockDeploymentService) DeleteDeployment(ctx interface{}, id, namespace string, kind models.DeploymentKind) error {
+func (m *MockDeploymentService) DeleteDeployment(ctx context.Context, id, namespace string, kind models.DeploymentKind) error {
 	args := m.Called(ctx, id, namespace, kind)
 	return args.Error(0)
 }
 
-func (m *MockDeploymentService) ListDeployments(ctx interface{}, req *models.ListDeploymentsRequest) (*models.ListDeploymentsResponse, error) {
+func (m *MockDeploymentService) ListDeployments(ctx context.Context, req *models.ListDeploymentsRequest) (*models.ListDeploymentsResponse, error) {
 	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -90,9 +95,9 @@ func TestCreateDeployment(t *testing.T) {
 				},
 				Spec: models.VMSpec{
 					VM: models.VMConfig{
-						Image:  "ubuntu:20.04",
-						CPU:    2,
-						Memory: "4Gi",
+						Ram: 4,
+						Cpu: 2,
+						Os:  "fedora",
 					},
 				},
 			},

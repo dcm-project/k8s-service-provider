@@ -10,7 +10,9 @@
       "Bash(git init:*)",
       "Bash(git add:*)",
       "Bash(git log:*)",
-      "Bash(git show:*)"
+      "Bash(git show:*)",
+      "Bash(make test:*)",
+      "Bash(go test:*)"
     ],
     "deny": [],
     "ask": []
