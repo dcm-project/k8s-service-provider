@@ -117,7 +117,7 @@ func (v *VMService) CreateVM(ctx context.Context, req *models.DeploymentRequest,
 							},
 						},
 						Machine: &kubevirtv1.Machine{
-							Type: "pc-q35-rhel9.6.0",
+							Type: "pc-q35-rhel9.4.0",
 						},
 					},
 					Networks: []kubevirtv1.Network{
