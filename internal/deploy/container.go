@@ -294,6 +294,18 @@ func (c *ContainerService) createDeployment(ctx context.Context, name, namespace
 		deployment.Spec.Template.Spec.Containers[0].Resources = resources
 	}
 
+	// Add environment variables if specified
+	if len(spec.Container.Environment) > 0 {
+		var envVars []corev1.EnvVar
+		for _, envVar := range spec.Container.Environment {
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  envVar.Name,
+				Value: envVar.Value,
+			})
+		}
+		deployment.Spec.Template.Spec.Containers[0].Env = envVars
+	}
+
 	_, err := c.client.AppsV1().Deployments(namespace).Create(ctx, deployment, metav1.CreateOptions{})
 	return err
 }
