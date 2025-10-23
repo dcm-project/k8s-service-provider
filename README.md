@@ -28,11 +28,16 @@ The service consists of several key components:
 
 ## API Endpoints
 
+### Deployment Service (Port 8080)
 - `POST /api/v1/deployments` - Create a new deployment
 - `GET /api/v1/deployments` - List deployments with filtering
 - `GET /api/v1/deployments/{id}` - Get specific deployment
 - `PUT /api/v1/deployments/{id}` - Update deployment
 - `DELETE /api/v1/deployments/{id}` - Delete deployment
+- `GET /api/v1/health` - Health check
+
+### Namespace Service (Port 8081)
+- `POST /api/v1/namespaces` - Get namespaces by label selectors
 - `GET /api/v1/health` - Health check
 
 ## Deployment Types
@@ -97,6 +102,34 @@ The service consists of several key components:
 - `ram`: Memory allocation in GB (1-32)
 - `cpu`: Number of CPU cores (1-32)
 - `os`: Operating system (automatically maps to appropriate container disk image)
+
+### Namespace Queries
+
+```json
+{
+  "labels": {
+    "environment": "production",
+    "team": "backend"
+  }
+}
+```
+
+**Response Example**:
+```json
+{
+  "namespaces": [
+    {
+      "name": "production-backend",
+      "labels": {
+        "environment": "production",
+        "team": "backend",
+        "created-by": "ops"
+      }
+    }
+  ],
+  "count": 1
+}
+```
 
 ## Prerequisites
 

@@ -9,9 +9,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/dcm/k8s-service-provider/internal/api"
-	"github.com/dcm/k8s-service-provider/internal/deploy"
-	"github.com/dcm/k8s-service-provider/internal/models"
+	"github.com/dcm/k8s-service-provider/internal/deployment/api"
+	"github.com/dcm/k8s-service-provider/internal/deployment/services"
+	"github.com/dcm/k8s-service-provider/internal/deployment/models"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 	"k8s.io/utils/ptr"
@@ -49,7 +49,7 @@ type MockDeploymentService struct {
 }
 
 // Verify that MockDeploymentService implements DeploymentServiceInterface
-var _ deploy.DeploymentServiceInterface = (*MockDeploymentService)(nil)
+var _ services.DeploymentServiceInterface = (*MockDeploymentService)(nil)
 
 func (m *MockDeploymentService) CreateDeployment(ctx context.Context, req *models.DeploymentRequest, id string) error {
 	if m.deployments == nil {

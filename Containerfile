@@ -47,8 +47,8 @@ RUN chown -R appuser:appgroup /home/appuser
 # Switch to non-root user
 USER appuser
 
-# Expose port
-EXPOSE 8080
+# Expose ports
+EXPOSE 8080 8081
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

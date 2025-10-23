@@ -1,0 +1,212 @@
+openapi: 3.1.0
+info:
+  title: K8s Namespace Service
+  description: A service that fetches Kubernetes namespaces based on label selectors
+  version: 1.0.0
+  contact:
+    name: K8s Team
+    email: k8s-team@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8081/api/v1
+    description: Development server
+  - url: https://k8s-service-provider.example.com:8081/api/v1
+    description: Production server
+
+paths:
+  /namespaces:
+    post:
+      summary: Get namespaces by labels
+      description: Returns a list of Kubernetes namespaces that match the provided label selectors
+      operationId: getNamespacesByLabels
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabelSelectors'
+            examples:
+              simple:
+                summary: Simple label selector
+                value:
+                  labels:
+                    environment: production
+                    team: backend
+              multiple:
+                summary: Multiple label selectors
+                value:
+                  labels:
+                    environment: staging
+                    app: web-service
+                    version: v1.2.3
+      responses:
+        '200':
+          description: Successfully retrieved namespaces
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NamespaceResponse'
+              examples:
+                success:
+                  summary: Successful response
+                  value:
+                    namespaces:
+                      - name: production-backend
+                        labels:
+                          environment: production
+                          team: backend
+                          created-by: ops
+                      - name: prod-api
+                        labels:
+                          environment: production
+                          team: backend
+                          service: api
+                    count: 2
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_labels:
+                  summary: Invalid label format
+                  value:
+                    error: "Validation Error"
+                    message: "Labels cannot be empty"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                k8s_error:
+                  summary: Kubernetes API error
+                  value:
+                    error: "Kubernetes API Error"
+                    message: "Failed to fetch namespaces"
+
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Returns the health status of the namespace service
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                healthy:
+                  summary: Healthy service
+                  value:
+                    status: "healthy"
+                    timestamp: "2024-01-15T10:30:00Z"
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                unhealthy:
+                  summary: Unhealthy service
+                  value:
+                    status: "unhealthy"
+                    timestamp: "2024-01-15T10:30:00Z"
+                    error: "Cannot connect to Kubernetes cluster"
+
+components:
+  schemas:
+    LabelSelectors:
+      type: object
+      required:
+        - labels
+      properties:
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+          description: Key-value pairs representing label selectors
+          example:
+            environment: production
+            team: backend
+      example:
+        labels:
+          environment: production
+          team: backend
+
+    Namespace:
+      type: object
+      required:
+        - name
+        - labels
+      properties:
+        name:
+          type: string
+          description: The name of the namespace
+          example: "production-backend"
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+          description: All labels on the namespace
+          example:
+            environment: production
+            team: backend
+            created-by: ops
+
+    NamespaceResponse:
+      type: object
+      required:
+        - namespaces
+        - count
+      properties:
+        namespaces:
+          type: array
+          items:
+            $ref: '#/components/schemas/Namespace'
+          description: List of matching namespaces
+        count:
+          type: integer
+          description: Number of matching namespaces
+          example: 2
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error type or category
+          example: "Validation Error"
+        message:
+          type: string
+          description: Detailed error message
+          example: "Labels cannot be empty"
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+          description: Health status of the service
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp of the health check
+        error:
+          type: string
+          description: Error message if status is unhealthy

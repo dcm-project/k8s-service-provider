@@ -190,7 +190,7 @@ image-build: ## Build container image
 image-run: ## Run container
 	@echo "Running container..."
 	@echo "Using kubeconfig: $(if $(KUBECONFIG),$(KUBECONFIG),~/.kube/config)"
-	@podman run -d --rm --name $(CONTAINER_NAME) -p 8082:8080 \
+	@podman run -d --rm --name $(CONTAINER_NAME) -p 8082:8080 -p 8083:8081 \
 		$(if $(DCM_NETWORK),--network $(DCM_NETWORK),) \
 		-v "$(if $(KUBECONFIG),$(KUBECONFIG),~/.kube/config)":/home/appuser/.kube/config:ro \
 		$(IMAGE_NAME):$(IMAGE_TAG)

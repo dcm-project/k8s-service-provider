@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dcm/k8s-service-provider/internal/deploy"
-	"github.com/dcm/k8s-service-provider/internal/models"
+	"github.com/dcm/k8s-service-provider/internal/deployment/services"
+	"github.com/dcm/k8s-service-provider/internal/deployment/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -14,12 +14,12 @@ import (
 
 // Handler handles HTTP requests for the deployment service
 type Handler struct {
-	deployService deploy.DeploymentServiceInterface
+	deployService services.DeploymentServiceInterface
 	logger        *zap.Logger
 }
 
 // NewHandler creates a new API handler
-func NewHandler(deployService deploy.DeploymentServiceInterface, logger *zap.Logger) *Handler {
+func NewHandler(deployService services.DeploymentServiceInterface, logger *zap.Logger) *Handler {
 	return &Handler{
 		deployService: deployService,
 		logger:        logger,

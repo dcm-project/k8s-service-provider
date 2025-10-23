@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/dcm/k8s-service-provider/internal/deploy"
-	"github.com/dcm/k8s-service-provider/internal/models"
+	"github.com/dcm/k8s-service-provider/internal/deployment/services"
+	"github.com/dcm/k8s-service-provider/internal/deployment/models"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -23,7 +23,7 @@ type MockDeploymentService struct {
 }
 
 // Verify that MockDeploymentService implements DeploymentServiceInterface
-var _ deploy.DeploymentServiceInterface = (*MockDeploymentService)(nil)
+var _ services.DeploymentServiceInterface = (*MockDeploymentService)(nil)
 
 func (m *MockDeploymentService) CreateDeployment(ctx context.Context, req *models.DeploymentRequest, id string) error {
 	args := m.Called(ctx, req, id)

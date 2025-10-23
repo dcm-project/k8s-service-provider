@@ -1,13 +1,13 @@
 package api
 
 import (
-	"github.com/dcm/k8s-service-provider/internal/deploy"
+	"github.com/dcm/k8s-service-provider/internal/deployment/services"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
 // SetupRouter sets up the HTTP router with all routes
-func SetupRouter(deployService deploy.DeploymentServiceInterface, logger *zap.Logger) *gin.Engine {
+func SetupRouter(deployService services.DeploymentServiceInterface, logger *zap.Logger) *gin.Engine {
 	// Set Gin mode based on environment
 	gin.SetMode(gin.ReleaseMode)
 

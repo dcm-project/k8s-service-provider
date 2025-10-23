@@ -1,12 +1,12 @@
-package deploy
+package services
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/dcm/k8s-service-provider/internal/models"
+	"github.com/dcm/k8s-service-provider/internal/deployment/models"
+	"github.com/dcm/k8s-service-provider/internal/k8s"
 	"go.uber.org/zap"
-	"k8s.io/client-go/kubernetes"
 )
 
 // DeploymentServiceInterface defines the interface for deployment operations
@@ -26,10 +26,10 @@ type DeploymentService struct {
 }
 
 // NewDeploymentService creates a new deployment service
-func NewDeploymentService(k8sClient kubernetes.Interface, logger *zap.Logger) *DeploymentService {
+func NewDeploymentService(k8sClient k8s.ClientInterface, logger *zap.Logger) *DeploymentService {
 	return &DeploymentService{
-		containerService: NewContainerService(k8sClient, logger),
-		vmService:        NewVMService(k8sClient, logger),
+		containerService: NewContainerService(k8sClient.GetClientset(), logger),
+		vmService:        NewVMService(k8sClient.GetClientset(), logger),
 		logger:           logger,
 	}
 }

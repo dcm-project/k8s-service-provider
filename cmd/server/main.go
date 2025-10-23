@@ -9,13 +9,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dcm/k8s-service-provider/internal/api"
+	"github.com/dcm/k8s-service-provider/internal/deployment/api"
 	"github.com/dcm/k8s-service-provider/internal/config"
-	"github.com/dcm/k8s-service-provider/internal/deploy"
+	"github.com/dcm/k8s-service-provider/internal/deployment/services"
+	"github.com/dcm/k8s-service-provider/internal/k8s"
+	namespaceAPI "github.com/dcm/k8s-service-provider/internal/namespace/api"
+	namespaceServices "github.com/dcm/k8s-service-provider/internal/namespace/services"
 	"go.uber.org/zap"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 func main() {
@@ -39,51 +39,99 @@ func main() {
 		zap.Int("port", cfg.Server.Port),
 	)
 
-	// Initialize Kubernetes client
-	k8sClient, err := initKubernetesClient(cfg.Kubernetes, logger)
+	// Initialize shared Kubernetes client
+	k8sClient, err := k8s.NewClient(cfg.Kubernetes, logger)
 	if err != nil {
 		logger.Fatal("Failed to initialize Kubernetes client", zap.Error(err))
 	}
 
 	// Initialize deployment service
-	deployService := deploy.NewDeploymentService(k8sClient, logger)
+	deployService := services.NewDeploymentService(k8sClient, logger)
 
-	// Setup HTTP router
-	router := api.SetupRouter(deployService, logger)
+	// Initialize namespace service
+	namespaceService := namespaceServices.NewNamespaceService(k8sClient, logger)
 
-	// Create HTTP server
-	server := &http.Server{
+	// Setup HTTP routers
+	deploymentRouter := api.SetupRouter(deployService, logger)
+	namespaceHandler := namespaceAPI.NewHandler(namespaceService, logger)
+	namespaceRouter := namespaceAPI.SetupRouter(namespaceHandler, logger)
+
+	// Create HTTP servers
+	deploymentServer := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port),
-		Handler:      router,
+		Handler:      deploymentRouter,
 		ReadTimeout:  time.Duration(cfg.Server.ReadTimeout) * time.Second,
 		WriteTimeout: time.Duration(cfg.Server.WriteTimeout) * time.Second,
 	}
 
-	// Start server in a goroutine
+	namespaceServer := &http.Server{
+		Addr:         fmt.Sprintf("%s:%d", cfg.Server.Host, 8081),
+		Handler:      namespaceRouter,
+		ReadTimeout:  time.Duration(cfg.Server.ReadTimeout) * time.Second,
+		WriteTimeout: time.Duration(cfg.Server.WriteTimeout) * time.Second,
+	}
+
+	// Start deployment service in a goroutine
 	go func() {
-		logger.Info("Starting HTTP server", zap.String("address", server.Addr))
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("Failed to start server", zap.Error(err))
+		logger.Info("Starting deployment service HTTP server", zap.String("address", deploymentServer.Addr))
+		if err := deploymentServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("Failed to start deployment server", zap.Error(err))
 		}
 	}()
 
-	// Wait for interrupt signal to gracefully shutdown the server
+	// Start namespace service in a goroutine
+	go func() {
+		logger.Info("Starting namespace service HTTP server", zap.String("address", namespaceServer.Addr))
+		if err := namespaceServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("Failed to start namespace server", zap.Error(err))
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown both servers
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	logger.Info("Shutting down server...")
+	logger.Info("Shutting down servers...")
 
 	// Give outstanding requests 30 seconds to complete
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	if err := server.Shutdown(ctx); err != nil {
-		logger.Error("Server forced to shutdown", zap.Error(err))
+	// Shutdown both servers concurrently
+	deploymentErr := make(chan error, 1)
+	namespaceErr := make(chan error, 1)
+
+	go func() {
+		deploymentErr <- deploymentServer.Shutdown(ctx)
+	}()
+
+	go func() {
+		namespaceErr <- namespaceServer.Shutdown(ctx)
+	}()
+
+	// Wait for both shutdowns to complete
+	var shutdownErrors []error
+	for i := 0; i < 2; i++ {
+		select {
+		case err := <-deploymentErr:
+			if err != nil {
+				logger.Error("Deployment server forced to shutdown", zap.Error(err))
+				shutdownErrors = append(shutdownErrors, err)
+			}
+		case err := <-namespaceErr:
+			if err != nil {
+				logger.Error("Namespace server forced to shutdown", zap.Error(err))
+				shutdownErrors = append(shutdownErrors, err)
+			}
+		}
+	}
+
+	if len(shutdownErrors) > 0 {
 		os.Exit(1)
 	}
 
-	logger.Info("Server gracefully stopped")
+	logger.Info("Both servers gracefully stopped")
 }
 
 // initLogger initializes the logger based on configuration
@@ -130,32 +178,4 @@ func initLogger(cfg config.LogConfig) (*zap.Logger, error) {
 	return zapConfig.Build()
 }
 
-// initKubernetesClient initializes the Kubernetes client
-func initKubernetesClient(cfg config.KubernetesConfig, logger *zap.Logger) (kubernetes.Interface, error) {
-	var k8sConfig *rest.Config
-	var err error
-
-	if cfg.InCluster {
-		logger.Info("Using in-cluster Kubernetes configuration")
-		k8sConfig, err = rest.InClusterConfig()
-	} else {
-		logger.Info("Using kubeconfig file", zap.String("path", cfg.ConfigPath))
-		if cfg.ConfigPath == "" {
-			cfg.ConfigPath = clientcmd.RecommendedHomeFile
-		}
-		k8sConfig, err = clientcmd.BuildConfigFromFlags("", cfg.ConfigPath)
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Kubernetes config: %w", err)
-	}
-
-	client, err := kubernetes.NewForConfig(k8sConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Kubernetes client: %w", err)
-	}
-
-	logger.Info("Successfully initialized Kubernetes client")
-	return client, nil
-}
 
