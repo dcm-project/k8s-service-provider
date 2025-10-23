@@ -33,14 +33,9 @@ func (c *ContainerService) CreateContainer(ctx context.Context, req *models.Depl
 	logger := c.logger.Named("container_service").With(zap.String("deployment_id", id))
 	logger.Info("Starting container deployment")
 
-	spec, ok := req.Spec.(map[string]interface{})
+	containerSpec, ok := req.Spec.(models.ContainerSpec)
 	if !ok {
 		return fmt.Errorf("invalid container spec format")
-	}
-
-	containerSpec, err := c.parseContainerSpec(spec)
-	if err != nil {
-		return fmt.Errorf("failed to parse container spec: %w", err)
 	}
 
 	namespace := req.Metadata.Namespace
@@ -54,13 +49,13 @@ func (c *ContainerService) CreateContainer(ctx context.Context, req *models.Depl
 	}
 
 	// Create deployment
-	if err := c.createDeployment(ctx, req.Metadata.Name, namespace, containerSpec, req.Metadata.Labels, id); err != nil {
+	if err := c.createDeployment(ctx, req.Metadata.Name, namespace, &containerSpec, req.Metadata.Labels, id); err != nil {
 		return fmt.Errorf("failed to create deployment: %w", err)
 	}
 
 	// Create service if ports are specified
 	if len(containerSpec.Container.Ports) > 0 {
-		if err := c.createService(ctx, req.Metadata.Name, namespace, containerSpec, req.Metadata.Labels, id); err != nil {
+		if err := c.createService(ctx, req.Metadata.Name, namespace, &containerSpec, req.Metadata.Labels, id); err != nil {
 			return fmt.Errorf("failed to create service: %w", err)
 		}
 	}
@@ -211,53 +206,6 @@ func (c *ContainerService) ListContainers(ctx context.Context, namespace string,
 	return responses, nil
 }
 
-// parseContainerSpec parses the container specification from the request
-func (c *ContainerService) parseContainerSpec(spec map[string]interface{}) (*models.ContainerSpec, error) {
-	// This is a simplified parsing - in a real implementation, you'd use proper JSON unmarshaling
-	containerData, ok := spec["container"].(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid container specification")
-	}
-
-	image, ok := containerData["image"].(string)
-	if !ok {
-		return nil, fmt.Errorf("image is required")
-	}
-
-	replicas := 1
-	if r, ok := containerData["replicas"].(float64); ok {
-		replicas = int(r)
-	}
-
-	containerSpec := &models.ContainerSpec{
-		Container: models.ContainerConfig{
-			Image:    image,
-			Replicas: replicas,
-		},
-	}
-
-	// Parse ports if present
-	if portsData, ok := containerData["ports"].([]interface{}); ok {
-		for _, portData := range portsData {
-			if portMap, ok := portData.(map[string]interface{}); ok {
-				if containerPort, ok := portMap["containerPort"].(float64); ok {
-					port := models.PortConfig{
-						ContainerPort: int(containerPort),
-					}
-					if servicePort, ok := portMap["servicePort"].(float64); ok {
-						port.ServicePort = int(servicePort)
-					}
-					if protocol, ok := portMap["protocol"].(string); ok {
-						port.Protocol = protocol
-					}
-					containerSpec.Container.Ports = append(containerSpec.Container.Ports, port)
-				}
-			}
-		}
-	}
-
-	return containerSpec, nil
-}
 
 // ensureNamespace creates namespace if it doesn't exist
 func (c *ContainerService) ensureNamespace(ctx context.Context, namespace string) error {
