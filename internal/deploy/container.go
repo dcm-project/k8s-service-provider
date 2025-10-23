@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/ptr"
 )
 
 // ContainerService handles container deployment operations
@@ -232,7 +233,7 @@ func (c *ContainerService) createDeployment(ctx context.Context, name, namespace
 	labels["app-id"] = id
 	labels["app"] = name
 
-	replicas := int32(spec.Container.Replicas)
+	replicas := int32(ptr.Deref(spec.Container.Replicas, 1))
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{

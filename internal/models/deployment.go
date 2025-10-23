@@ -45,7 +45,7 @@ type ContainerSpec struct {
 // ContainerConfig represents container configuration
 type ContainerConfig struct {
 	Image       string                `json:"image" binding:"required"`
-	Replicas    int                   `json:"replicas,omitempty"`
+	Replicas    *int                  `json:"replicas,omitempty"`
 	Ports       []PortConfig          `json:"ports,omitempty"`
 	Resources   *ResourceConfig       `json:"resources,omitempty"`
 	Environment []EnvironmentVariable `json:"environment,omitempty"`

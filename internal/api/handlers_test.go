@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
+	"k8s.io/utils/ptr"
 )
 
 // MockDeploymentService is a mock implementation of the deployment service
@@ -76,7 +77,7 @@ func TestCreateDeployment(t *testing.T) {
 				Spec: models.ContainerSpec{
 					Container: models.ContainerConfig{
 						Image:    "nginx:latest",
-						Replicas: 1,
+						Replicas: ptr.To(1),
 					},
 				},
 			},

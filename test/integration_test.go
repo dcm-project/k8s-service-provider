@@ -14,6 +14,7 @@ import (
 	"github.com/dcm/service-provider/internal/models"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
+	"k8s.io/utils/ptr"
 )
 
 // IntegrationTestSuite defines the test suite for integration tests
@@ -181,7 +182,7 @@ func (suite *IntegrationTestSuite) TestContainerDeploymentLifecycle() {
 		Spec: models.ContainerSpec{
 			Container: models.ContainerConfig{
 				Image:    "nginx:latest",
-				Replicas: 2,
+				Replicas: ptr.To(2),
 				Ports: []models.PortConfig{
 					{
 						ContainerPort: 80,
@@ -219,7 +220,7 @@ func (suite *IntegrationTestSuite) TestContainerDeploymentLifecycle() {
 	// Update deployment
 	updateReq := createReq
 	containerSpec := updateReq.Spec.(models.ContainerSpec)
-	containerSpec.Container.Replicas = 3
+	containerSpec.Container.Replicas = ptr.To(3)
 	updateReq.Spec = containerSpec
 	updateBody, _ := json.Marshal(updateReq)
 

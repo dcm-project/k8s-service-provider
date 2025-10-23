@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"k8s.io/utils/ptr"
 )
 
 func TestDeploymentRequest_JSON(t *testing.T) {
@@ -29,7 +30,7 @@ func TestDeploymentRequest_JSON(t *testing.T) {
 				Spec: ContainerSpec{
 					Container: ContainerConfig{
 						Image:    "nginx:latest",
-						Replicas: 2,
+						Replicas: ptr.To(2),
 						Ports: []PortConfig{
 							{
 								ContainerPort: 80,
@@ -98,7 +99,7 @@ func TestDeploymentResponse_JSON(t *testing.T) {
 		Spec: ContainerSpec{
 			Container: ContainerConfig{
 				Image:    "nginx:latest",
-				Replicas: 1,
+				Replicas: ptr.To(1),
 			},
 		},
 		Status: DeploymentStatus{
