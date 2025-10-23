@@ -9,9 +9,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dcm/service-provider/internal/api"
-	"github.com/dcm/service-provider/internal/config"
-	"github.com/dcm/service-provider/internal/deploy"
+	"github.com/dcm/k8s-service-provider/internal/api"
+	"github.com/dcm/k8s-service-provider/internal/config"
+	"github.com/dcm/k8s-service-provider/internal/deploy"
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -34,7 +34,7 @@ func main() {
 	}
 	defer logger.Sync()
 
-	logger.Info("Starting DCM Service Provider",
+	logger.Info("Starting K8s Service Provider",
 		zap.String("version", "1.0.0"),
 		zap.Int("port", cfg.Server.Port),
 	)

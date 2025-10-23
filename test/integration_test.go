@@ -9,9 +9,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/dcm/service-provider/internal/api"
-	"github.com/dcm/service-provider/internal/deploy"
-	"github.com/dcm/service-provider/internal/models"
+	"github.com/dcm/k8s-service-provider/internal/api"
+	"github.com/dcm/k8s-service-provider/internal/deploy"
+	"github.com/dcm/k8s-service-provider/internal/models"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 	"k8s.io/utils/ptr"

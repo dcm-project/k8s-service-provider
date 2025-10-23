@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/dcm/service-provider/internal/models"
+	"github.com/dcm/k8s-service-provider/internal/models"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

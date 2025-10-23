@@ -64,8 +64,8 @@ temp/
 .dockerignore
 
 # Application specific
-dcm-service-provider
-dcm-service-provider-*
+k8s-service-provider
+k8s-service-provider-*
 
 # Documentation build output
 docs/_build/

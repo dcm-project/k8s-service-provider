@@ -17,7 +17,7 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o dcm-service-provider cmd/server/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o k8s-service-provider cmd/server/main.go
 
 # Final stage
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
@@ -33,7 +33,7 @@ RUN groupadd -g 1001 appgroup && \
 WORKDIR /home/appuser
 
 # Copy the binary from builder stage
-COPY --from=builder /app/dcm-service-provider .
+COPY --from=builder /app/k8s-service-provider .
 
 # Copy OpenAPI spec (for documentation)
 COPY --from=builder /app/api/openapi.yaml .
@@ -55,12 +55,12 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:8080/api/v1/health || exit 1
 
 # Labels for metadata
-LABEL maintainer="DCM Team <dcm-team@example.com>" \
-      org.opencontainers.image.title="DCM Service Provider" \
+LABEL maintainer="K8s Team <k8s-team@example.com>" \
+      org.opencontainers.image.title="K8S Service Provider for DCM" \
       org.opencontainers.image.description="A microservice for managing container and virtual machine deployments" \
       org.opencontainers.image.vendor="DCM Project" \
-      org.opencontainers.image.source="https://github.com/dcm/service-provider" \
+      org.opencontainers.image.source="https://github.com/dcm/k8s-service-provider" \
       org.opencontainers.image.licenses="MIT"
 
 # Run the application
-CMD ["./dcm-service-provider"]
+CMD ["./k8s-service-provider"]

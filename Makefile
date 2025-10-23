@@ -1,8 +1,8 @@
-# DCM Service Provider Makefile
-# This Makefile provides build automation for the DCM Service Provider microservice
+# K8s Service Provider Makefile
+# This Makefile provides build automation for the K8s Service Provider microservice
 
 # Variables
-APP_NAME := dcm-service-provider
+APP_NAME := k8s-service-provider
 BINARY_NAME := $(APP_NAME)
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "v0.1.0")
 BUILD_TIME := $(shell date -u '+%Y-%m-%d_%H:%M:%S')
@@ -33,7 +33,7 @@ BUILD_FLAGS := -v $(LDFLAGS)
 
 .PHONY: help
 help: ## Display this help message
-	@echo "DCM Service Provider Build Commands"
+	@echo "K8s Service Provider Build Commands"
 	@echo "=================================="
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 

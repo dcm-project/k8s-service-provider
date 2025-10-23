@@ -1,4 +1,4 @@
-module github.com/dcm/service-provider
+module github.com/dcm/k8s-service-provider
 
 go 1.23.0
 

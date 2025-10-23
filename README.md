@@ -1,4 +1,4 @@
-# DCM Service Provider
+# K8s Service Provider
 
 A microservice for managing container and virtual machine deployments on Kubernetes with KubeVirt support.
 
@@ -111,7 +111,7 @@ The service consists of several key components:
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd dcm-service-provider
+cd k8s-service-provider
 ```
 
 2. Install dependencies:
@@ -126,7 +126,7 @@ make build
 
 4. Run the application:
 ```bash
-./bin/dcm-service-provider
+./bin/k8s-service-provider
 ```
 
 ### Using Container
@@ -247,7 +247,7 @@ make image-stop
 ## Project Structure
 
 ```
-dcm-service-provider/
+k8s-service-provider/
 ├── api/                    # OpenAPI specifications
 ├── cmd/server/            # Application entrypoint
 ├── internal/              # Internal packages
@@ -280,4 +280,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 For questions or issues, please:
 1. Check the existing issues in the repository
 2. Create a new issue with detailed information
-3. Contact the DCM team at dcm-team@example.com
+3. Contact the team at k8s-team@example.com

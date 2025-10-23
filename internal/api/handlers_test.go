@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/dcm/service-provider/internal/deploy"
-	"github.com/dcm/service-provider/internal/models"
+	"github.com/dcm/k8s-service-provider/internal/deploy"
+	"github.com/dcm/k8s-service-provider/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
