@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/yblum/work/dcm-placement-api/**)",
+      "Read(//Users/yblum/work/k8s-namespace-fetcher/**)",
+      "Bash(go clean:*)",
+      "Bash(go mod:*)",
+      "Bash(go build:*)",
+      "Bash(make build:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

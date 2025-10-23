@@ -1,0 +1,509 @@
+openapi: 3.0.3
+info:
+  title: DCM Deploy Service Provider
+  description: A microservice for managing container and virtual machine deployments
+  version: 1.0.0
+  contact:
+    name: DCM Team
+    email: dcm-team@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Development server
+  - url: https://dcm-deploy-service.example.com/api/v1
+    description: Production server
+
+paths:
+  /deployments:
+    post:
+      summary: Create a new deployment
+      description: Creates a new container or virtual machine deployment
+      operationId: createDeployment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeploymentRequest'
+            examples:
+              container:
+                summary: Container deployment example
+                value:
+                  kind: container
+                  metadata:
+                    name: nginx-app
+                    namespace: default
+                    labels:
+                      app: nginx
+                      version: "1.0"
+                  spec:
+                    container:
+                      image: nginx:latest
+                      replicas: 3
+                      ports:
+                        - containerPort: 80
+                          servicePort: 8080
+                      resources:
+                        cpu: 100m
+                        memory: 128Mi
+              vm:
+                summary: Virtual machine deployment example
+                value:
+                  kind: vm
+                  metadata:
+                    name: ubuntu-vm
+                    namespace: default
+                    labels:
+                      os: ubuntu
+                      version: "20.04"
+                  spec:
+                    vm:
+                      image: ubuntu:20.04
+                      cpu: 2
+                      memory: 4Gi
+                      disk: 20Gi
+                      sshKey: "ssh-rsa AAAAB3NzaC1yc2E..."
+                      cloudInit: |
+                        #cloud-config
+                        users:
+                          - name: ubuntu
+                            sudo: ALL=(ALL) NOPASSWD:ALL
+      responses:
+        '201':
+          description: Deployment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeploymentResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Deployment already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: List all deployments
+      description: Retrieves a list of all deployments
+      operationId: listDeployments
+      parameters:
+        - name: namespace
+          in: query
+          description: Filter deployments by namespace
+          schema:
+            type: string
+        - name: kind
+          in: query
+          description: Filter deployments by kind (container or vm)
+          schema:
+            type: string
+            enum: [container, vm]
+        - name: limit
+          in: query
+          description: Maximum number of deployments to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of deployments to skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: List of deployments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deployments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeploymentResponse'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /deployments/{id}:
+    get:
+      summary: Get a deployment by ID
+      description: Retrieves a specific deployment by its ID
+      operationId: getDeployment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Deployment ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deployment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeploymentResponse'
+        '404':
+          description: Deployment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update a deployment
+      description: Updates an existing deployment
+      operationId: updateDeployment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Deployment ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeploymentRequest'
+      responses:
+        '200':
+          description: Deployment updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeploymentResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Deployment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete a deployment
+      description: Deletes a specific deployment
+      operationId: deleteDeployment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Deployment ID
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deployment deleted successfully
+        '404':
+          description: Deployment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /health:
+    get:
+      summary: Health check
+      description: Returns the health status of the service
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy]
+                  timestamp:
+                    type: string
+                    format: date-time
+
+components:
+  schemas:
+    DeploymentRequest:
+      type: object
+      required:
+        - kind
+        - metadata
+        - spec
+      properties:
+        kind:
+          type: string
+          enum: [container, vm]
+          description: Type of deployment (container or virtual machine)
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        spec:
+          oneOf:
+            - $ref: '#/components/schemas/ContainerSpec'
+            - $ref: '#/components/schemas/VMSpec'
+          discriminator:
+            propertyName: kind
+            mapping:
+              container: '#/components/schemas/ContainerSpec'
+              vm: '#/components/schemas/VMSpec'
+
+    DeploymentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique deployment identifier
+        kind:
+          type: string
+          enum: [container, vm]
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        spec:
+          oneOf:
+            - $ref: '#/components/schemas/ContainerSpec'
+            - $ref: '#/components/schemas/VMSpec'
+        status:
+          $ref: '#/components/schemas/DeploymentStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Metadata:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+          description: Deployment name (DNS-1123 compliant)
+        namespace:
+          type: string
+          default: default
+          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+          description: Kubernetes namespace
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+          description: Key-value pairs for labeling
+
+    ContainerSpec:
+      type: object
+      required:
+        - container
+      properties:
+        container:
+          type: object
+          required:
+            - image
+          properties:
+            image:
+              type: string
+              description: Container image name and tag
+            replicas:
+              type: integer
+              minimum: 1
+              maximum: 100
+              default: 1
+              description: Number of replicas
+            ports:
+              type: array
+              items:
+                type: object
+                required:
+                  - containerPort
+                properties:
+                  containerPort:
+                    type: integer
+                    minimum: 1
+                    maximum: 65535
+                  servicePort:
+                    type: integer
+                    minimum: 1
+                    maximum: 65535
+                  protocol:
+                    type: string
+                    enum: [TCP, UDP]
+                    default: TCP
+            resources:
+              type: object
+              properties:
+                cpu:
+                  type: string
+                  pattern: '^[0-9]+m?$'
+                  description: CPU request (e.g., 100m, 1)
+                memory:
+                  type: string
+                  pattern: '^[0-9]+[KMGT]?i?$'
+                  description: Memory request (e.g., 128Mi, 1Gi)
+            environment:
+              type: array
+              items:
+                type: object
+                required:
+                  - name
+                  - value
+                properties:
+                  name:
+                    type: string
+                  value:
+                    type: string
+
+    VMSpec:
+      type: object
+      required:
+        - vm
+      properties:
+        vm:
+          type: object
+          required:
+            - image
+            - cpu
+            - memory
+          properties:
+            image:
+              type: string
+              description: VM image name
+            cpu:
+              type: integer
+              minimum: 1
+              maximum: 32
+              description: Number of CPU cores
+            memory:
+              type: string
+              pattern: '^[0-9]+[KMGT]?i?$'
+              description: Memory allocation (e.g., 4Gi, 1024Mi)
+            disk:
+              type: string
+              pattern: '^[0-9]+[KMGT]?i?$'
+              description: Disk size (e.g., 20Gi, 100Gi)
+              default: 10Gi
+            sshKey:
+              type: string
+              description: SSH public key for access
+            cloudInit:
+              type: string
+              description: Cloud-init configuration script
+
+    DeploymentStatus:
+      type: object
+      properties:
+        phase:
+          type: string
+          enum: [pending, running, succeeded, failed, unknown]
+        message:
+          type: string
+          description: Human-readable status message
+        readyReplicas:
+          type: integer
+          description: Number of ready replicas (for containers)
+        conditions:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              status:
+                type: string
+                enum: [True, False, Unknown]
+              lastTransitionTime:
+                type: string
+                format: date-time
+              reason:
+                type: string
+              message:
+                type: string
+
+    Pagination:
+      type: object
+      properties:
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+        hasMore:
+          type: boolean
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Error message
+        details:
+          type: string
+          description: Additional error details
+        timestamp:
+          type: string
+          format: date-time
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: []
