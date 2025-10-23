@@ -66,6 +66,7 @@ temp/
 # Application specific
 k8s-service-provider
 k8s-service-provider-*
+main
 
 # Documentation build output
 docs/_build/
