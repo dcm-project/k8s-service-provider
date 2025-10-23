@@ -32,7 +32,7 @@ type DeploymentResponse struct {
 
 // Metadata represents common metadata for deployments
 type Metadata struct {
-	Name      string            `json:"name" binding:"required,dns1123"`
+	Name      string            `json:"name" binding:"required,max=63,min=1"`
 	Namespace string            `json:"namespace,omitempty"`
 	Labels    map[string]string `json:"labels,omitempty"`
 }

@@ -30,14 +30,9 @@ func (v *VMService) CreateVM(ctx context.Context, req *models.DeploymentRequest,
 	logger := v.logger.Named("vm_service").With(zap.String("deployment_id", id))
 	logger.Info("Starting VM deployment")
 
-	spec, ok := req.Spec.(map[string]interface{})
+	vmSpec, ok := req.Spec.(models.VMSpec)
 	if !ok {
 		return fmt.Errorf("invalid VM spec format")
-	}
-
-	vmSpec, err := v.parseVMSpec(spec)
-	if err != nil {
-		return fmt.Errorf("failed to parse VM spec: %w", err)
 	}
 
 	namespace := req.Metadata.Namespace
@@ -59,7 +54,7 @@ func (v *VMService) CreateVM(ctx context.Context, req *models.DeploymentRequest,
 
 	// For now, we'll create a placeholder ConfigMap to represent the VM
 	// In a real implementation, this would create KubeVirt VirtualMachine resources
-	if err := v.createVMConfigMap(ctx, req.Metadata.Name, namespace, vmSpec, req.Metadata.Labels, id); err != nil {
+	if err := v.createVMConfigMap(ctx, req.Metadata.Name, namespace, &vmSpec, req.Metadata.Labels, id); err != nil {
 		return fmt.Errorf("failed to create VM representation: %w", err)
 	}
 
@@ -216,50 +211,6 @@ func (v *VMService) ListVMs(ctx context.Context, namespace string, limit, offset
 	return responses, nil
 }
 
-// parseVMSpec parses the VM specification from the request
-func (v *VMService) parseVMSpec(spec map[string]interface{}) (*models.VMSpec, error) {
-	vmData, ok := spec["vm"].(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid VM specification")
-	}
-
-	image, ok := vmData["image"].(string)
-	if !ok {
-		return nil, fmt.Errorf("image is required")
-	}
-
-	cpu, ok := vmData["cpu"].(float64)
-	if !ok {
-		return nil, fmt.Errorf("cpu is required")
-	}
-
-	memory, ok := vmData["memory"].(string)
-	if !ok {
-		return nil, fmt.Errorf("memory is required")
-	}
-
-	vmSpec := &models.VMSpec{
-		VM: models.VMConfig{
-			Image:  image,
-			CPU:    int(cpu),
-			Memory: memory,
-		},
-	}
-
-	if disk, ok := vmData["disk"].(string); ok {
-		vmSpec.VM.Disk = disk
-	}
-
-	if sshKey, ok := vmData["sshKey"].(string); ok {
-		vmSpec.VM.SSHKey = sshKey
-	}
-
-	if cloudInit, ok := vmData["cloudInit"].(string); ok {
-		vmSpec.VM.CloudInit = cloudInit
-	}
-
-	return vmSpec, nil
-}
 
 // ensureNamespace creates namespace if it doesn't exist
 func (v *VMService) ensureNamespace(ctx context.Context, namespace string) error {
