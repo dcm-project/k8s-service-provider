@@ -63,10 +63,7 @@ func (v *VMService) CreateVM(ctx context.Context, req *models.DeploymentRequest,
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-", req.Metadata.Name),
 			Namespace:    namespace,
-			Labels: map[string]string{
-				"app-id":    id,
-				"managed-by": "k8s-service-provider",
-			},
+			Labels:       models.BuildDeploymentLabels(id, req.Metadata.Name),
 		},
 		Spec: kubevirtv1.VirtualMachineSpec{
 			RunStrategy: &[]kubevirtv1.VirtualMachineRunStrategy{kubevirtv1.RunStrategyRerunOnFailure}[0],
@@ -169,7 +166,7 @@ func (v *VMService) GetVM(ctx context.Context, id string) (*models.DeploymentRes
 
 	// Search across all namespaces using label selector
 	vms, err := v.kubevirtClient.VirtualMachine("").List(ctx, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("app-id=%s,managed-by=k8s-service-provider", id),
+		LabelSelector: models.BuildDeploymentSelector(id),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get virtual machine: %w", err)
@@ -230,7 +227,7 @@ func (v *VMService) DeleteVM(ctx context.Context, id, namespace string) error {
 
 	// Delete VirtualMachines
 	err := v.kubevirtClient.VirtualMachine(namespace).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("app-id=%s,managed-by=k8s-service-provider", id),
+		LabelSelector: models.BuildDeploymentSelector(id),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to delete VirtualMachine: %w", err)
@@ -247,7 +244,7 @@ func (v *VMService) ListVMs(ctx context.Context, namespace string, limit, offset
 	// Use empty string to search all namespaces if namespace is not specified
 	// Filter only resources managed by this service
 	vms, err := v.kubevirtClient.VirtualMachine(namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: "managed-by=k8s-service-provider",
+		LabelSelector: models.BuildManagedResourceSelector(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list virtual machines: %w", err)
@@ -262,7 +259,7 @@ func (v *VMService) ListVMs(ctx context.Context, namespace string, limit, offset
 			break
 		}
 
-		appID := vm.Labels["app-id"]
+		appID := vm.Labels[models.LabelAppID]
 		// This should always exist since we filter by managed-by, but keeping as safety check
 
 		response := models.DeploymentResponse{

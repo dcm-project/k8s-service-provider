@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -10,6 +11,18 @@ type DeploymentKind string
 const (
 	DeploymentKindContainer DeploymentKind = "container"
 	DeploymentKindVM        DeploymentKind = "vm"
+)
+
+// Label keys for Kubernetes resources
+const (
+	LabelManagedBy = "managed-by"
+	LabelAppID     = "app-id"
+	LabelApp       = "app"
+)
+
+// Label values
+const (
+	LabelValueManagedBy = "k8s-service-provider"
 )
 
 // DeploymentRequest represents the request payload for creating/updating deployments
@@ -144,4 +157,23 @@ type ErrorResponse struct {
 	Message   string    `json:"message"`
 	Details   string    `json:"details,omitempty"`
 	Timestamp time.Time `json:"timestamp"`
+}
+
+// BuildDeploymentSelector creates a label selector for a specific deployment ID
+func BuildDeploymentSelector(id string) string {
+	return fmt.Sprintf("%s=%s,%s=%s", LabelAppID, id, LabelManagedBy, LabelValueManagedBy)
+}
+
+// BuildManagedResourceSelector creates a label selector for all managed resources
+func BuildManagedResourceSelector() string {
+	return fmt.Sprintf("%s=%s", LabelManagedBy, LabelValueManagedBy)
+}
+
+// BuildDeploymentLabels creates the standard set of labels for deployment resources
+func BuildDeploymentLabels(id, name string) map[string]string {
+	return map[string]string{
+		LabelAppID:     id,
+		LabelApp:       name,
+		LabelManagedBy: LabelValueManagedBy,
+	}
 }

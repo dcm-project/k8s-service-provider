@@ -71,7 +71,7 @@ func (c *ContainerService) GetContainer(ctx context.Context, id string) (*models
 
 	// Search across all namespaces using label selector
 	deployments, err := c.client.AppsV1().Deployments("").List(ctx, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("app-id=%s,managed-by=k8s-service-provider", id),
+		LabelSelector: models.BuildDeploymentSelector(id),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get deployment: %w", err)
@@ -133,7 +133,7 @@ func (c *ContainerService) DeleteContainer(ctx context.Context, id, namespace st
 
 	// Delete deployment
 	err := c.client.AppsV1().Deployments(namespace).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("app-id=%s,managed-by=k8s-service-provider", id),
+		LabelSelector: models.BuildDeploymentSelector(id),
 	})
 	if err != nil {
 		logger.Error("Failed to delete deployment", zap.Error(err))
@@ -142,7 +142,7 @@ func (c *ContainerService) DeleteContainer(ctx context.Context, id, namespace st
 
 	// Delete services
 	services, err := c.client.CoreV1().Services(namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("app-id=%s,managed-by=k8s-service-provider", id),
+		LabelSelector: models.BuildDeploymentSelector(id),
 	})
 	if err != nil {
 		logger.Warn("Failed to list services for deletion", zap.Error(err))
@@ -166,7 +166,7 @@ func (c *ContainerService) ListContainers(ctx context.Context, namespace string,
 	// Use empty string to search all namespaces if namespace is not specified
 	// Filter only resources managed by this service
 	deployments, err := c.client.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: "managed-by=k8s-service-provider",
+		LabelSelector: models.BuildManagedResourceSelector(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list deployments: %w", err)
@@ -182,7 +182,7 @@ func (c *ContainerService) ListContainers(ctx context.Context, namespace string,
 		}
 
 		response := models.DeploymentResponse{
-			ID:   deployment.Labels["app-id"],
+			ID:   deployment.Labels[models.LabelAppID],
 			Kind: models.DeploymentKindContainer,
 			Metadata: models.Metadata{
 				Name:      deployment.Name,
@@ -226,9 +226,11 @@ func (c *ContainerService) createDeployment(ctx context.Context, name, namespace
 	if labels == nil {
 		labels = make(map[string]string)
 	}
-	labels["app-id"] = id
-	labels["app"] = name
-	labels["managed-by"] = "k8s-service-provider"
+	// Merge user labels with deployment labels
+	deploymentLabels := models.BuildDeploymentLabels(id, name)
+	for k, v := range deploymentLabels {
+		labels[k] = v
+	}
 
 	replicas := int32(ptr.Deref(spec.Container.Replicas, 1))
 
@@ -240,11 +242,11 @@ func (c *ContainerService) createDeployment(ctx context.Context, name, namespace
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"app": name, "app-id": id, "managed-by": "k8s-service-provider"},
+				MatchLabels: models.BuildDeploymentLabels(id, name),
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{"app": name, "app-id": id, "managed-by": "k8s-service-provider"},
+					Labels: models.BuildDeploymentLabels(id, name),
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -312,8 +314,11 @@ func (c *ContainerService) createService(ctx context.Context, name, namespace st
 	if labels == nil {
 		labels = make(map[string]string)
 	}
-	labels["app-id"] = id
-	labels["managed-by"] = "k8s-service-provider"
+	// Merge user labels with deployment labels
+	deploymentLabels := models.BuildDeploymentLabels(id, name)
+	for k, v := range deploymentLabels {
+		labels[k] = v
+	}
 
 	var servicePorts []corev1.ServicePort
 	for _, port := range spec.Container.Ports {
@@ -335,7 +340,7 @@ func (c *ContainerService) createService(ctx context.Context, name, namespace st
 			Labels: labels,
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{"app": name, "app-id": id, "managed-by": "k8s-service-provider"},
+			Selector: models.BuildDeploymentLabels(id, name),
 			Ports:    servicePorts,
 			Type:     corev1.ServiceTypeNodePort,
 		},
