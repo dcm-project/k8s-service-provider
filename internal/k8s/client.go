@@ -13,7 +13,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/dcm/k8s-service-provider/internal/config"
+	"github.com/dcm-project/k8s-service-provider/internal/config"
 )
 
 // Client wraps the Kubernetes client and provides shared functionality

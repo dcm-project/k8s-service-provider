@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dcm/k8s-service-provider/internal/deployment/services"
-	"github.com/dcm/k8s-service-provider/internal/deployment/models"
+	"github.com/dcm-project/k8s-service-provider/internal/deployment/services"
+	"github.com/dcm-project/k8s-service-provider/internal/deployment/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"go.uber.org/zap"

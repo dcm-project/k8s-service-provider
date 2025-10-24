@@ -3,8 +3,8 @@ package services
 import (
 	"context"
 
-	"github.com/dcm/k8s-service-provider/internal/k8s"
-	"github.com/dcm/k8s-service-provider/internal/namespace/models"
+	"github.com/dcm-project/k8s-service-provider/internal/k8s"
+	"github.com/dcm-project/k8s-service-provider/internal/namespace/models"
 	"go.uber.org/zap"
 )
 

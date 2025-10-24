@@ -9,12 +9,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dcm/k8s-service-provider/internal/deployment/api"
-	"github.com/dcm/k8s-service-provider/internal/config"
-	"github.com/dcm/k8s-service-provider/internal/deployment/services"
-	"github.com/dcm/k8s-service-provider/internal/k8s"
-	namespaceAPI "github.com/dcm/k8s-service-provider/internal/namespace/api"
-	namespaceServices "github.com/dcm/k8s-service-provider/internal/namespace/services"
+	"github.com/dcm-project/k8s-service-provider/internal/deployment/api"
+	"github.com/dcm-project/k8s-service-provider/internal/config"
+	"github.com/dcm-project/k8s-service-provider/internal/deployment/services"
+	"github.com/dcm-project/k8s-service-provider/internal/k8s"
+	namespaceAPI "github.com/dcm-project/k8s-service-provider/internal/namespace/api"
+	namespaceServices "github.com/dcm-project/k8s-service-provider/internal/namespace/services"
 	"go.uber.org/zap"
 )
 

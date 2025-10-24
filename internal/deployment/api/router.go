@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/dcm/k8s-service-provider/internal/deployment/services"
+	"github.com/dcm-project/k8s-service-provider/internal/deployment/services"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )

@@ -59,7 +59,7 @@ LABEL maintainer="K8s Team <k8s-team@example.com>" \
       org.opencontainers.image.title="K8S Service Provider for DCM" \
       org.opencontainers.image.description="A microservice for managing container and virtual machine deployments" \
       org.opencontainers.image.vendor="DCM Project" \
-      org.opencontainers.image.source="https://github.com/dcm/k8s-service-provider" \
+      org.opencontainers.image.source="https://github.com/dcm-project/k8s-service-provider" \
       org.opencontainers.image.licenses="MIT"
 
 # Run the application
