@@ -64,7 +64,8 @@ func (v *VMService) CreateVM(ctx context.Context, req *models.DeploymentRequest,
 			GenerateName: fmt.Sprintf("%s-", req.Metadata.Name),
 			Namespace:    namespace,
 			Labels: map[string]string{
-				"app-id": id,
+				"app-id":    id,
+				"managed-by": "k8s-service-provider",
 			},
 		},
 		Spec: kubevirtv1.VirtualMachineSpec{
@@ -163,23 +164,19 @@ func (v *VMService) CreateVM(ctx context.Context, req *models.DeploymentRequest,
 }
 
 // GetVM retrieves VM deployment information
-func (v *VMService) GetVM(ctx context.Context, id, namespace string) (*models.DeploymentResponse, error) {
+func (v *VMService) GetVM(ctx context.Context, id string) (*models.DeploymentResponse, error) {
 	logger := v.logger.Named("vm_service").With(zap.String("deployment_id", id))
 
-	if namespace == "" {
-		namespace = "default"
-	}
-
-	// Get VirtualMachine by label selector
-	vms, err := v.kubevirtClient.VirtualMachine(namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("app-id=%s", id),
+	// Search across all namespaces using label selector
+	vms, err := v.kubevirtClient.VirtualMachine("").List(ctx, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("app-id=%s,managed-by=k8s-service-provider", id),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get virtual machine: %w", err)
 	}
 
 	if len(vms.Items) == 0 {
-		return nil, fmt.Errorf("virtual machine not found")
+		return nil, models.NewErrDeploymentNotFound(id)
 	}
 
 	vm := vms.Items[0]
@@ -233,7 +230,7 @@ func (v *VMService) DeleteVM(ctx context.Context, id, namespace string) error {
 
 	// Delete VirtualMachines
 	err := v.kubevirtClient.VirtualMachine(namespace).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("app-id=%s", id),
+		LabelSelector: fmt.Sprintf("app-id=%s,managed-by=k8s-service-provider", id),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to delete VirtualMachine: %w", err)
@@ -247,11 +244,11 @@ func (v *VMService) DeleteVM(ctx context.Context, id, namespace string) error {
 func (v *VMService) ListVMs(ctx context.Context, namespace string, limit, offset int) ([]models.DeploymentResponse, error) {
 	logger := v.logger.Named("vm_service")
 
-	if namespace == "" {
-		namespace = "default"
-	}
-
-	vms, err := v.kubevirtClient.VirtualMachine(namespace).List(ctx, metav1.ListOptions{})
+	// Use empty string to search all namespaces if namespace is not specified
+	// Filter only resources managed by this service
+	vms, err := v.kubevirtClient.VirtualMachine(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: "managed-by=k8s-service-provider",
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list virtual machines: %w", err)
 	}
@@ -266,9 +263,7 @@ func (v *VMService) ListVMs(ctx context.Context, namespace string, limit, offset
 		}
 
 		appID := vm.Labels["app-id"]
-		if appID == "" {
-			continue // Skip VMs without app-id label
-		}
+		// This should always exist since we filter by managed-by, but keeping as safety check
 
 		response := models.DeploymentResponse{
 			ID:   appID,

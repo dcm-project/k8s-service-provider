@@ -30,8 +30,8 @@ func (m *MockDeploymentService) CreateDeployment(ctx context.Context, req *model
 	return args.Error(0)
 }
 
-func (m *MockDeploymentService) GetDeploymentByID(ctx context.Context, id, namespace string) (*models.DeploymentResponse, error) {
-	args := m.Called(ctx, id, namespace)
+func (m *MockDeploymentService) GetDeploymentByID(ctx context.Context, id string) (*models.DeploymentResponse, error) {
+	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -43,8 +43,8 @@ func (m *MockDeploymentService) UpdateDeployment(ctx context.Context, req *model
 	return args.Error(0)
 }
 
-func (m *MockDeploymentService) DeleteDeployment(ctx context.Context, id, namespace string, kind models.DeploymentKind) error {
-	args := m.Called(ctx, id, namespace, kind)
+func (m *MockDeploymentService) DeleteDeployment(ctx context.Context, id string) error {
+	args := m.Called(ctx, id)
 	return args.Error(0)
 }
 
@@ -176,7 +176,7 @@ func TestGetDeployment(t *testing.T) {
 						Namespace: "default",
 					},
 				}
-				m.On("GetDeploymentByID", mock.Anything, "test-id", "default").Return(response, nil)
+				m.On("GetDeploymentByID", mock.Anything, "test-id").Return(response, nil)
 			},
 			expectedStatus: http.StatusOK,
 			expectedBody:   "test-id",
@@ -185,7 +185,7 @@ func TestGetDeployment(t *testing.T) {
 			name:         "deployment not found",
 			deploymentID: "nonexistent",
 			setupMock: func(m *MockDeploymentService) {
-				m.On("GetDeploymentByID", mock.Anything, "nonexistent", "default").Return(nil, assert.AnError)
+				m.On("GetDeploymentByID", mock.Anything, "nonexistent").Return(nil, models.NewErrDeploymentNotFound("nonexistent"))
 			},
 			expectedStatus: http.StatusNotFound,
 			expectedBody:   "DEPLOYMENT_NOT_FOUND",
@@ -252,21 +252,18 @@ func TestDeleteDeployment(t *testing.T) {
 			deploymentID: "test-id",
 			queryParams:  "?kind=container",
 			setupMock: func(m *MockDeploymentService) {
-				m.On("DeleteDeployment", mock.Anything, "test-id", "default", models.DeploymentKindContainer).Return(nil)
+				m.On("DeleteDeployment", mock.Anything, "test-id").Return(nil)
 			},
 			expectedStatus: http.StatusNoContent,
 		},
 		{
-			name:         "successful delete without kind (lookup first)",
+			name:         "successful delete without kind (service handles lookup)",
 			deploymentID: "test-id",
 			queryParams:  "",
 			setupMock: func(m *MockDeploymentService) {
-				response := &models.DeploymentResponse{
-					ID:   "test-id",
-					Kind: models.DeploymentKindVM,
-				}
-				m.On("GetDeploymentByID", mock.Anything, "test-id", "default").Return(response, nil)
-				m.On("DeleteDeployment", mock.Anything, "test-id", "default", models.DeploymentKindVM).Return(nil)
+				// With new implementation, only DeleteDeployment is called
+				// The service handles the lookup internally
+				m.On("DeleteDeployment", mock.Anything, "test-id").Return(nil)
 			},
 			expectedStatus: http.StatusNoContent,
 		},

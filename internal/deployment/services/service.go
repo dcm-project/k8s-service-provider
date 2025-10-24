@@ -12,9 +12,9 @@ import (
 // DeploymentServiceInterface defines the interface for deployment operations
 type DeploymentServiceInterface interface {
 	CreateDeployment(ctx context.Context, req *models.DeploymentRequest, id string) error
-	GetDeploymentByID(ctx context.Context, id, namespace string) (*models.DeploymentResponse, error)
+	GetDeploymentByID(ctx context.Context, id string) (*models.DeploymentResponse, error)
 	UpdateDeployment(ctx context.Context, req *models.DeploymentRequest, id string) error
-	DeleteDeployment(ctx context.Context, id, namespace string, kind models.DeploymentKind) error
+	DeleteDeployment(ctx context.Context, id string) error
 	ListDeployments(ctx context.Context, req *models.ListDeploymentsRequest) (*models.ListDeploymentsResponse, error)
 }
 
@@ -44,6 +44,30 @@ func (d *DeploymentService) CreateDeployment(ctx context.Context, req *models.De
 
 	logger.Info("Creating deployment")
 
+	// Check for global ID uniqueness before creating
+	existingDeployment, err := d.GetDeploymentByID(ctx, id)
+	if err == nil {
+		// Deployment with this ID already exists
+		logger.Error("Deployment ID already exists",
+			zap.String("deployment_id", id),
+			zap.String("existing_namespace", existingDeployment.Metadata.Namespace),
+			zap.String("existing_kind", string(existingDeployment.Kind)))
+		return models.NewErrDeploymentAlreadyExists(id, existingDeployment.Metadata.Namespace, existingDeployment.Kind)
+	}
+
+	// If error is multiple deployments found, that's also a conflict
+	if models.IsMultipleFoundError(err) {
+		logger.Error("Multiple deployments with same ID already exist", zap.String("deployment_id", id))
+		return err // Return the original multiple found error
+	}
+
+	// If error is "deployment not found", that's what we want - proceed with creation
+	if !models.IsNotFoundError(err) {
+		// Some other error occurred during lookup
+		logger.Error("Failed to check deployment ID uniqueness", zap.Error(err))
+		return fmt.Errorf("failed to validate deployment ID uniqueness: %w", err)
+	}
+
 	switch req.Kind {
 	case models.DeploymentKindContainer:
 		return d.containerService.CreateContainer(ctx, req, id)
@@ -65,9 +89,9 @@ func (d *DeploymentService) GetDeployment(ctx context.Context, id, namespace str
 
 	switch kind {
 	case models.DeploymentKindContainer:
-		return d.containerService.GetContainer(ctx, id, namespace)
+		return d.containerService.GetContainer(ctx, id)
 	case models.DeploymentKindVM:
-		return d.vmService.GetVM(ctx, id, namespace)
+		return d.vmService.GetVM(ctx, id)
 	default:
 		return nil, fmt.Errorf("unsupported deployment kind: %s", kind)
 	}
@@ -93,22 +117,26 @@ func (d *DeploymentService) UpdateDeployment(ctx context.Context, req *models.De
 	}
 }
 
-// DeleteDeployment deletes a deployment by ID and kind
-func (d *DeploymentService) DeleteDeployment(ctx context.Context, id, namespace string, kind models.DeploymentKind) error {
-	logger := d.logger.Named("deployment_service").With(
-		zap.String("kind", string(kind)),
-		zap.String("deployment_id", id),
-	)
+// DeleteDeployment deletes a deployment by ID (auto-detects namespace and kind)
+func (d *DeploymentService) DeleteDeployment(ctx context.Context, id string) error {
+	logger := d.logger.Named("deployment_service").With(zap.String("deployment_id", id))
 
 	logger.Info("Deleting deployment")
 
-	switch kind {
+	// First, find the deployment to get its details
+	deployment, err := d.GetDeploymentByID(ctx, id)
+	if err != nil {
+		return err // This will include "multiple deployments found" or "deployment not found" errors
+	}
+
+	// Delete based on the found deployment's kind
+	switch deployment.Kind {
 	case models.DeploymentKindContainer:
-		return d.containerService.DeleteContainer(ctx, id, namespace)
+		return d.containerService.DeleteContainer(ctx, id, deployment.Metadata.Namespace)
 	case models.DeploymentKindVM:
-		return d.vmService.DeleteVM(ctx, id, namespace)
+		return d.vmService.DeleteVM(ctx, id, deployment.Metadata.Namespace)
 	default:
-		return fmt.Errorf("unsupported deployment kind: %s", kind)
+		return fmt.Errorf("unsupported deployment kind: %s", deployment.Kind)
 	}
 }
 
@@ -173,20 +201,41 @@ func (d *DeploymentService) ListDeployments(ctx context.Context, req *models.Lis
 	return response, nil
 }
 
-// GetDeploymentByID retrieves a deployment by ID, searching both containers and VMs
-func (d *DeploymentService) GetDeploymentByID(ctx context.Context, id, namespace string) (*models.DeploymentResponse, error) {
+// GetDeploymentByID retrieves a deployment by ID, searching both containers and VMs across all namespaces
+func (d *DeploymentService) GetDeploymentByID(ctx context.Context, id string) (*models.DeploymentResponse, error) {
 	logger := d.logger.Named("deployment_service").With(zap.String("deployment_id", id))
 
-	// Try to find as container first
-	if deployment, err := d.containerService.GetContainer(ctx, id, namespace); err == nil {
-		return deployment, nil
+	var foundDeployments []*models.DeploymentResponse
+
+	// Try to find as container
+	if deployment, err := d.containerService.GetContainer(ctx, id); err == nil {
+		foundDeployments = append(foundDeployments, deployment)
 	}
 
 	// Try to find as VM
-	if deployment, err := d.vmService.GetVM(ctx, id, namespace); err == nil {
-		return deployment, nil
+	if deployment, err := d.vmService.GetVM(ctx, id); err == nil {
+		foundDeployments = append(foundDeployments, deployment)
+	}
+
+	// Check for conflicts (multiple deployments with same ID)
+	if len(foundDeployments) > 1 {
+		logger.Error("Multiple deployments found with same ID",
+			zap.String("deployment_id", id),
+			zap.Int("count", len(foundDeployments)))
+
+		// Extract namespaces for better error context
+		namespaces := make([]string, len(foundDeployments))
+		for i, deployment := range foundDeployments {
+			namespaces[i] = deployment.Metadata.Namespace
+		}
+		return nil, models.NewErrMultipleDeploymentsFound(id, len(foundDeployments), namespaces...)
+	}
+
+	// Return the found deployment
+	if len(foundDeployments) == 1 {
+		return foundDeployments[0], nil
 	}
 
 	logger.Warn("Deployment not found", zap.String("deployment_id", id))
-	return nil, fmt.Errorf("deployment not found")
+	return nil, models.NewErrDeploymentNotFound(id)
 }

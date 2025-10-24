@@ -65,6 +65,18 @@ func (h *Handler) CreateDeployment(c *gin.Context) {
 	// Create the deployment
 	if err := h.deployService.CreateDeployment(c.Request.Context(), &req, deploymentID); err != nil {
 		logger.Error("Failed to create deployment", zap.Error(err))
+
+		// Check if error is due to ID conflicts
+		if models.IsConflictError(err) {
+			c.JSON(http.StatusConflict, models.ErrorResponse{
+				Code:      "DEPLOYMENT_ID_EXISTS",
+				Message:   "Deployment ID already exists",
+				Details:   err.Error(),
+				Timestamp: time.Now(),
+			})
+			return
+		}
+
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Code:      "DEPLOYMENT_FAILED",
 			Message:   "Failed to create deployment",
@@ -105,17 +117,36 @@ func (h *Handler) GetDeployment(c *gin.Context) {
 		return
 	}
 
-	namespace := c.Query("namespace")
-	if namespace == "" {
-		namespace = "default"
-	}
-
-	deployment, err := h.deployService.GetDeploymentByID(c.Request.Context(), deploymentID, namespace)
+	deployment, err := h.deployService.GetDeploymentByID(c.Request.Context(), deploymentID)
 	if err != nil {
 		logger.Error("Failed to get deployment", zap.Error(err))
-		c.JSON(http.StatusNotFound, models.ErrorResponse{
-			Code:      "DEPLOYMENT_NOT_FOUND",
-			Message:   "Deployment not found",
+
+		// Check if error indicates multiple deployments found
+		if models.IsMultipleFoundError(err) {
+			c.JSON(http.StatusConflict, models.ErrorResponse{
+				Code:      "DEPLOYMENT_ID_CONFLICT",
+				Message:   "Multiple deployments found with the same ID across different namespaces",
+				Details:   err.Error(),
+				Timestamp: time.Now(),
+			})
+			return
+		}
+
+		// Check if deployment not found
+		if models.IsNotFoundError(err) {
+			c.JSON(http.StatusNotFound, models.ErrorResponse{
+				Code:      "DEPLOYMENT_NOT_FOUND",
+				Message:   "Deployment not found",
+				Details:   err.Error(),
+				Timestamp: time.Now(),
+			})
+			return
+		}
+
+		// Any other error
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:      "INTERNAL_ERROR",
+			Message:   "Internal server error",
 			Details:   err.Error(),
 			Timestamp: time.Now(),
 		})
@@ -212,17 +243,23 @@ func (h *Handler) DeleteDeployment(c *gin.Context) {
 		return
 	}
 
-	namespace := c.Query("namespace")
-	if namespace == "" {
-		namespace = "default"
-	}
+	// Delete the deployment (service will auto-detect namespace and kind)
+	if err := h.deployService.DeleteDeployment(c.Request.Context(), deploymentID); err != nil {
+		logger.Error("Failed to delete deployment", zap.Error(err))
 
-	kind := c.Query("kind")
-	if kind == "" {
-		// Try to determine kind by looking up the deployment
-		deployment, err := h.deployService.GetDeploymentByID(c.Request.Context(), deploymentID, namespace)
-		if err != nil {
-			logger.Error("Failed to get deployment for deletion", zap.Error(err))
+		// Check if error indicates multiple deployments found
+		if models.IsMultipleFoundError(err) {
+			c.JSON(http.StatusConflict, models.ErrorResponse{
+				Code:      "DEPLOYMENT_ID_CONFLICT",
+				Message:   "Multiple deployments found with the same ID across different namespaces",
+				Details:   err.Error(),
+				Timestamp: time.Now(),
+			})
+			return
+		}
+
+		// Check if deployment not found
+		if models.IsNotFoundError(err) {
 			c.JSON(http.StatusNotFound, models.ErrorResponse{
 				Code:      "DEPLOYMENT_NOT_FOUND",
 				Message:   "Deployment not found",
@@ -231,23 +268,7 @@ func (h *Handler) DeleteDeployment(c *gin.Context) {
 			})
 			return
 		}
-		kind = string(deployment.Kind)
-	}
 
-	deploymentKind := models.DeploymentKind(kind)
-	if deploymentKind != models.DeploymentKindContainer && deploymentKind != models.DeploymentKindVM {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
-			Code:      "INVALID_KIND",
-			Message:   "Invalid deployment kind",
-			Details:   "Kind must be 'container' or 'vm'",
-			Timestamp: time.Now(),
-		})
-		return
-	}
-
-	// Delete the deployment
-	if err := h.deployService.DeleteDeployment(c.Request.Context(), deploymentID, namespace, deploymentKind); err != nil {
-		logger.Error("Failed to delete deployment", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Code:      "DELETE_FAILED",
 			Message:   "Failed to delete deployment",
@@ -281,9 +302,7 @@ func (h *Handler) ListDeployments(c *gin.Context) {
 	if req.Limit == 0 {
 		req.Limit = 20
 	}
-	if req.Namespace == "" {
-		req.Namespace = "default"
-	}
+	// Keep namespace empty if not specified - service will search all namespaces
 
 	response, err := h.deployService.ListDeployments(c.Request.Context(), &req)
 	if err != nil {

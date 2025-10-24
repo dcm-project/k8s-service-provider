@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -68,25 +67,25 @@ func (m *MockDeploymentService) CreateDeployment(ctx context.Context, req *model
 	return nil
 }
 
-func (m *MockDeploymentService) GetDeploymentByID(ctx context.Context, id, namespace string) (*models.DeploymentResponse, error) {
+func (m *MockDeploymentService) GetDeploymentByID(ctx context.Context, id string) (*models.DeploymentResponse, error) {
 	if m.deployments == nil {
-		return nil, fmt.Errorf("deployment not found")
+		return nil, models.NewErrDeploymentNotFound(id)
 	}
 
 	deployment, exists := m.deployments[id]
 	if !exists {
-		return nil, fmt.Errorf("deployment not found")
+		return nil, models.NewErrDeploymentNotFound(id)
 	}
 	return deployment, nil
 }
 
 func (m *MockDeploymentService) UpdateDeployment(ctx context.Context, req *models.DeploymentRequest, id string) error {
 	if m.deployments == nil {
-		return fmt.Errorf("deployment not found")
+		return models.NewErrDeploymentNotFound(id)
 	}
 
 	if _, exists := m.deployments[id]; !exists {
-		return fmt.Errorf("deployment not found")
+		return models.NewErrDeploymentNotFound(id)
 	}
 
 	m.deployments[id].Spec = req.Spec
@@ -94,13 +93,13 @@ func (m *MockDeploymentService) UpdateDeployment(ctx context.Context, req *model
 	return nil
 }
 
-func (m *MockDeploymentService) DeleteDeployment(ctx context.Context, id, namespace string, kind models.DeploymentKind) error {
+func (m *MockDeploymentService) DeleteDeployment(ctx context.Context, id string) error {
 	if m.deployments == nil {
-		return fmt.Errorf("deployment not found")
+		return models.NewErrDeploymentNotFound(id)
 	}
 
 	if _, exists := m.deployments[id]; !exists {
-		return fmt.Errorf("deployment not found")
+		return models.NewErrDeploymentNotFound(id)
 	}
 
 	delete(m.deployments, id)
