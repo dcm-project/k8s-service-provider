@@ -135,13 +135,14 @@ fmt: ## Format Go code
 	go fmt ./...
 
 .PHONY: lint
-lint: ## Run linter
-	@echo "Running linter..."
-	@if command -v golangci-lint >/dev/null 2>&1; then \
-		golangci-lint run --timeout=5m; \
+lint: ## Run linter using pre-commit
+	@echo "Executing pre-commit for all files"
+	@if command -v pre-commit >/dev/null 2>&1; then \
+		pre-commit run --all-files; \
 	else \
-		echo "golangci-lint not installed. Install with: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"; \
+		echo "pre-commit not installed. Install with: pip install pre-commit"; \
 	fi
+	@echo "pre-commit executed."
 
 .PHONY: vet
 vet: ## Run go vet
@@ -227,6 +228,7 @@ clean: ## Clean build artifacts
 .PHONY: install-tools
 install-tools: ## Install development tools
 	@echo "Installing development tools..."
+	pip install pre-commit
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
 	go install github.com/go-swagger/go-swagger/cmd/swagger@latest
