@@ -32,7 +32,12 @@ func main() {
 		fmt.Printf("Failed to initialize logger: %v\n", err)
 		os.Exit(1)
 	}
-	defer logger.Sync()
+	defer func() {
+		if err := logger.Sync(); err != nil {
+			// Log sync errors but don't exit - this is cleanup code
+			fmt.Printf("Logger sync error during shutdown: %v\n", err)
+		}
+	}()
 
 	logger.Info("Starting K8s Service Provider",
 		zap.String("version", "1.0.0"),
@@ -177,5 +182,3 @@ func initLogger(cfg config.LogConfig) (*zap.Logger, error) {
 
 	return zapConfig.Build()
 }
-
-
