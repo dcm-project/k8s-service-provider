@@ -97,12 +97,14 @@ func TestLoadConfig(t *testing.T) {
 				"KUBECONFIG", "IN_CLUSTER", "LOG_LEVEL", "LOG_FORMAT", "LOG_OUTPUT_PATH",
 			}
 			for _, envVar := range envVarsToClean {
-				os.Unsetenv(envVar)
+				_ = os.Unsetenv(envVar)
 			}
 
 			// Set test environment variables
 			for key, value := range tt.envVars {
-				os.Setenv(key, value)
+				if err := os.Setenv(key, value); err != nil {
+					t.Fatalf("Failed to set environment variable %s: %v", key, err)
+				}
 			}
 
 			// Load configuration
@@ -121,7 +123,7 @@ func TestLoadConfig(t *testing.T) {
 
 			// Clean up environment variables
 			for key := range tt.envVars {
-				os.Unsetenv(key)
+				_ = os.Unsetenv(key)
 			}
 		})
 	}
@@ -161,11 +163,13 @@ func TestGetEnv(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Clean up environment variable
-			os.Unsetenv(tt.key)
+			_ = os.Unsetenv(tt.key)
 
 			// Set environment variable if needed
 			if tt.envValue != "" {
-				os.Setenv(tt.key, tt.envValue)
+				if err := os.Setenv(tt.key, tt.envValue); err != nil {
+					t.Fatalf("Failed to set environment variable %s: %v", tt.key, err)
+				}
 			}
 
 			// Test function
@@ -173,7 +177,7 @@ func TestGetEnv(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 
 			// Clean up
-			os.Unsetenv(tt.key)
+			_ = os.Unsetenv(tt.key)
 		})
 	}
 }
@@ -226,11 +230,13 @@ func TestGetEnvAsInt(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Clean up environment variable
-			os.Unsetenv(tt.key)
+			_ = os.Unsetenv(tt.key)
 
 			// Set environment variable if needed
 			if tt.envValue != "" {
-				os.Setenv(tt.key, tt.envValue)
+				if err := os.Setenv(tt.key, tt.envValue); err != nil {
+					t.Fatalf("Failed to set environment variable %s: %v", tt.key, err)
+				}
 			}
 
 			// Test function
@@ -238,7 +244,7 @@ func TestGetEnvAsInt(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 
 			// Clean up
-			os.Unsetenv(tt.key)
+			_ = os.Unsetenv(tt.key)
 		})
 	}
 }
@@ -298,11 +304,13 @@ func TestGetEnvAsBool(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Clean up environment variable
-			os.Unsetenv(tt.key)
+			_ = os.Unsetenv(tt.key)
 
 			// Set environment variable if needed
 			if tt.envValue != "" {
-				os.Setenv(tt.key, tt.envValue)
+				if err := os.Setenv(tt.key, tt.envValue); err != nil {
+					t.Fatalf("Failed to set environment variable %s: %v", tt.key, err)
+				}
 			}
 
 			// Test function
@@ -310,7 +318,7 @@ func TestGetEnvAsBool(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 
 			// Clean up
-			os.Unsetenv(tt.key)
+			_ = os.Unsetenv(tt.key)
 		})
 	}
 }
@@ -425,7 +433,9 @@ func TestConfigIntegration(t *testing.T) {
 	}
 
 	for key, value := range testEnvVars {
-		os.Setenv(key, value)
+		if err := os.Setenv(key, value); err != nil {
+			t.Fatalf("Failed to set test environment variable %s: %v", key, err)
+		}
 	}
 
 	// Load and validate configuration
@@ -443,9 +453,11 @@ func TestConfigIntegration(t *testing.T) {
 	// Restore original environment
 	for key, value := range originalEnvVars {
 		if value == "" {
-			os.Unsetenv(key)
+			_ = os.Unsetenv(key)
 		} else {
-			os.Setenv(key, value)
+			if err := os.Setenv(key, value); err != nil {
+				t.Errorf("Failed to restore environment variable %s: %v", key, err)
+			}
 		}
 	}
 }

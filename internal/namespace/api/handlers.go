@@ -40,7 +40,7 @@ func (h *Handler) GetNamespacesByLabels(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Validate request
-	if req.Labels == nil || len(req.Labels) == 0 {
+	if len(req.Labels) == 0 {
 		h.logger.Error("Empty labels provided")
 		h.writeErrorResponse(w, http.StatusBadRequest, "Validation Error", "Labels cannot be empty")
 		return
