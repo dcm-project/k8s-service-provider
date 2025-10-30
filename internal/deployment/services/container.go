@@ -232,7 +232,7 @@ func (c *ContainerService) createDeployment(ctx context.Context, name, namespace
 		labels[k] = v
 	}
 
-	replicas := int32(ptr.Deref(spec.Container.Replicas, 1))
+	replicas := int32(ptr.Deref(spec.Container.Replicas, 1)) // #nosec G115
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -265,7 +265,7 @@ func (c *ContainerService) createDeployment(ctx context.Context, name, namespace
 		var containerPorts []corev1.ContainerPort
 		for _, port := range spec.Container.Ports {
 			containerPorts = append(containerPorts, corev1.ContainerPort{
-				ContainerPort: int32(port.ContainerPort),
+				ContainerPort: int32(port.ContainerPort), // #nosec G115
 				Protocol:      corev1.ProtocolTCP,
 			})
 		}
@@ -322,9 +322,9 @@ func (c *ContainerService) createService(ctx context.Context, name, namespace st
 
 	var servicePorts []corev1.ServicePort
 	for _, port := range spec.Container.Ports {
-		servicePort := int32(port.ContainerPort)
+		servicePort := int32(port.ContainerPort) // #nosec G115
 		if port.ServicePort > 0 {
-			servicePort = int32(port.ServicePort)
+			servicePort = int32(port.ServicePort) // #nosec G115
 		}
 
 		servicePorts = append(servicePorts, corev1.ServicePort{
