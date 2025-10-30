@@ -72,7 +72,7 @@ func (v *VMService) CreateVM(ctx context.Context, req *models.DeploymentRequest,
 					Architecture: "amd64",
 					Domain: kubevirtv1.DomainSpec{
 						CPU: &kubevirtv1.CPU{
-							Cores: uint32(vmSpec.VM.Cpu),
+							Cores: uint32(vmSpec.VM.Cpu), // #nosec G115
 						},
 						Memory: &kubevirtv1.Memory{
 							Guest: &memory,

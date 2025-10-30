@@ -155,7 +155,7 @@ sec: ## Run security scanner
 	@if command -v gosec >/dev/null 2>&1; then \
 		gosec ./...; \
 	else \
-		echo "gosec not installed. Install with: go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest"; \
+		echo "gosec not installed. Install with: go install github.com/securego/gosec/v2/cmd/gosec@latest"; \
 	fi
 
 .PHONY: check
@@ -230,7 +230,7 @@ install-tools: ## Install development tools
 	@echo "Installing development tools..."
 	pip install pre-commit
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-	go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+	go install github.com/securego/gosec/v2/cmd/gosec@latest
 	go install github.com/go-swagger/go-swagger/cmd/swagger@latest
 
 .PHONY: info
