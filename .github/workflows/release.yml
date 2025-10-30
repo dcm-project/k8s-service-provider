@@ -105,18 +105,7 @@ jobs:
         with:
           sarif_file: 'trivy-results.sarif'
 
-      - name: Generate SBOM
-        uses: anchore/sbom-action@v0
-        with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
-          format: spdx-json
-          output-file: sbom.spdx.json
 
-      - name: Upload SBOM as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: sbom-${{ steps.version.outputs.VERSION }}
-          path: sbom.spdx.json
 
   summary:
     name: Release Summary
@@ -143,4 +132,3 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Security:" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Vulnerability scan completed with Trivy" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ SBOM generated and uploaded as artifact" >> $GITHUB_STEP_SUMMARY
