@@ -8,6 +8,10 @@ env:
   REGISTRY: quay.io
   IMAGE_NAME: dcm-project/k8s-service-provider
 
+permissions:
+  contents: read
+  security-events: write
+
 jobs:
   test:
     name: Run Tests
