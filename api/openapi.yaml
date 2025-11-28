@@ -64,6 +64,23 @@ paths:
                       ram: 4
                       cpu: 2
                       os: fedora
+              vm-with-ssh:
+                summary: Virtual machine with SSH key example
+                value:
+                  kind: vm
+                  metadata:
+                    name: ubuntu-vm
+                    namespace: default
+                    labels:
+                      os: ubuntu
+                      environment: production
+                  spec:
+                    vm:
+                      ram: 8
+                      cpu: 4
+                      os: ubuntu
+                      sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC3F... user@hostname"
+                      sshKeyName: "ubuntu-vm-ssh-key"
       responses:
         '201':
           description: Deployment created successfully
@@ -421,6 +438,25 @@ components:
               type: string
               enum: [fedora, ubuntu, centos, rhel]
               description: Operating system for the VM
+            sshPublicKey:
+              type: string
+              description: |
+                Optional SSH public key content to inject into the VM.
+                Must be a valid SSH public key (ssh-rsa, ssh-ed25519, ecdsa-sha2-*, or ssh-dss).
+                If provided without sshKeyName, a secret with a randomized name will be created.
+                If sshKeyName is provided and the secret exists, this field is ignored.
+              example: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC..."
+            sshKeyName:
+              type: string
+              pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+              maxLength: 253
+              description: |
+                Optional name of the Kubernetes Secret to store/reference the SSH public key.
+                Must follow DNS-1123 subdomain rules (lowercase alphanumeric with hyphens).
+                If not provided and sshPublicKey is set, a randomized secret name will be generated.
+                If provided and the secret exists, it will be reused (sshPublicKey is ignored).
+                If provided and the secret doesn't exist, sshPublicKey must be provided to create it.
+              example: "my-vm-ssh-key"
 
     DeploymentStatus:
       type: object
