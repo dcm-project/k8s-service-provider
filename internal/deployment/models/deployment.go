@@ -15,9 +15,10 @@ const (
 
 // Label keys for Kubernetes resources
 const (
-	LabelManagedBy = "managed-by"
-	LabelAppID     = "app-id"
-	LabelApp       = "app"
+	LabelManagedBy        = "managed-by"
+	LabelAppID            = "app-id"
+	LabelApp              = "app"
+	LabelSSHSecretCreated = "ssh-secret-created" // #nosec G101
 )
 
 // Label values
@@ -90,9 +91,11 @@ type VMSpec struct {
 
 // VMConfig represents virtual machine configuration aligned with CatalogVm
 type VMConfig struct {
-	Ram int    `json:"ram" binding:"required,min=1,max=32"`
-	Cpu int    `json:"cpu" binding:"required,min=1,max=32"`
-	Os  string `json:"os" binding:"required"`
+	Ram          int     `json:"ram" binding:"required,min=1,max=32"`
+	Cpu          int     `json:"cpu" binding:"required,min=1,max=32"`
+	Os           string  `json:"os" binding:"required"`
+	SshPublicKey *string `json:"sshPublicKey,omitempty"` // Optional: SSH public key content
+	SshKeyName   *string `json:"sshKeyName,omitempty"`   // Optional: Secret name
 }
 
 // DeploymentStatus represents the status of a deployment
