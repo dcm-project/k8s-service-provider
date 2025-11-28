@@ -45,7 +45,7 @@ make clean                   # Clean build artifacts and cache
 ### Container Operations
 ```bash
 make image-build             # Build container image with podman
-make image-run               # Run container (ports 8082:8080, 8083:8081)
+make image-run               # Run container (maps ports for both services)
 make image-stop              # Stop running container
 ```
 
@@ -53,10 +53,10 @@ make image-stop              # Stop running container
 
 ### Two-Service Design
 The application runs two HTTP servers concurrently:
-- **Deployment Service** (port 8080): Manages container and VM deployments
-- **Namespace Service** (port 8081): Queries namespaces by label selectors
+- **Deployment Service**: Manages container and VM deployments
+- **Namespace Service**: Queries namespaces by label selectors
 
-Both servers share a single Kubernetes client instance and use graceful shutdown with a 30-second timeout.
+Both servers share a single Kubernetes client instance and use graceful shutdown. The deployment service runs on the configured SERVER_PORT (default defined in config), and the namespace service runs on port 8081.
 
 ### Core Components
 
@@ -96,7 +96,7 @@ Both servers share a single Kubernetes client instance and use graceful shutdown
 - `GetDeploymentByID()` searches both container and VM services across all namespaces
 - Returns `ErrMultipleDeploymentsFound` if same ID exists multiple times (data integrity violation)
 
-Implementation in `internal/deployment/services/service.go:204-241`:
+Implementation in `internal/deployment/services/service.go` (GetDeploymentByID function):
 ```go
 func (d *DeploymentService) GetDeploymentByID(ctx context.Context, id string) (*models.DeploymentResponse, error) {
     var foundDeployments []*models.DeploymentResponse
@@ -117,7 +117,7 @@ func (d *DeploymentService) GetDeploymentByID(ctx context.Context, id string) (*
 
 ### Resource Labeling System
 
-All managed resources use standardized labels defined in `internal/deployment/models/deployment.go:16-26`:
+All managed resources use standardized labels (see `internal/deployment/models/deployment.go`):
 
 **Label Constants**:
 - `LabelManagedBy` = "managed-by" (value: "k8s-service-provider")
@@ -180,26 +180,30 @@ go test -race -coverprofile=coverage.out ./internal/deployment/services
 
 ## Configuration
 
-Environment variables (see `internal/config/config.go`):
+Configuration is managed through environment variables. Default values are defined in `internal/config/config.go` (LoadConfig function).
 
 ### Server Configuration
-- `SERVER_PORT`: HTTP server port (default: 8080)
-- `SERVER_HOST`: HTTP server host (default: 0.0.0.0)
-- `SERVER_READ_TIMEOUT`: Read timeout in seconds (default: 30)
-- `SERVER_WRITE_TIMEOUT`: Write timeout in seconds (default: 30)
+- `SERVER_PORT`: HTTP server port
+- `SERVER_HOST`: HTTP server host
+- `SERVER_READ_TIMEOUT`: Read timeout in seconds
+- `SERVER_WRITE_TIMEOUT`: Write timeout in seconds
 
 ### Kubernetes Configuration
-- `KUBECONFIG`: Path to kubeconfig file (default: ~/.kube/config)
-- `IN_CLUSTER`: Use in-cluster configuration (default: false)
+- `KUBECONFIG`: Path to kubeconfig file
+- `IN_CLUSTER`: Use in-cluster configuration
 
 ### Logging Configuration
-- `LOG_LEVEL`: Log level: debug, info, warn, error (default: info)
-- `LOG_FORMAT`: Log format: json, console (default: json)
-- `LOG_OUTPUT_PATH`: Log output path (default: stdout)
+- `LOG_LEVEL`: Log level (debug, info, warn, error)
+- `LOG_FORMAT`: Log format (json, console)
+- `LOG_OUTPUT_PATH`: Log output path
+
+See `internal/config/config.go` for current default values.
 
 ## API Endpoints Reference
 
-### Deployment Service (Port 8080)
+See `api/openapi.yaml` and `api/namespace-openapi.yaml` for complete API documentation.
+
+### Deployment Service
 - `POST /api/v1/deployments` - Create deployment (namespace required in body)
 - `GET /api/v1/deployments` - List deployments with filtering
 - `GET /api/v1/deployments/{id}` - Get deployment by ID (searches globally)
@@ -207,9 +211,11 @@ Environment variables (see `internal/config/config.go`):
 - `DELETE /api/v1/deployments/{id}` - Delete deployment by ID
 - `GET /api/v1/health` - Health check
 
-### Namespace Service (Port 8081)
+### Namespace Service
 - `POST /api/v1/namespaces` - Get namespaces by label selectors
 - `GET /api/v1/health` - Health check
+
+The deployment service runs on SERVER_PORT (configurable via environment, see Configuration section). The namespace service runs on port 8081.
 
 ## Key Implementation Details
 
